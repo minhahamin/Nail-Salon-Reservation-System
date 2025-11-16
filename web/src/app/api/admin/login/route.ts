@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 		if (!verifyAdminCredentials(username, password)) {
 			return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
 		}
-		setAdminSessionCookie();
+		await setAdminSessionCookie();
 		return NextResponse.json({ ok: true });
 	} catch {
 		return NextResponse.json({ message: "Server error" }, { status: 500 });
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
 	try {
-		clearAdminSessionCookie();
+		await clearAdminSessionCookie();
 		return NextResponse.json({ ok: true });
 	} catch {
 		return NextResponse.json({ message: "Server error" }, { status: 500 });

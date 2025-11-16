@@ -19,32 +19,8 @@ function periodOf(date: Date): "오전" | "오후" | "저녁" {
 
 export default function SlotRecommendations({ data, onPick, selected, isLoading, error, initialPerGroup = 6 }: Props) {
 	const [shown, setShown] = useState<Record<string, number>>({});
-
-	if (error) {
-		return (
-			<div className="space-y-2">
-				<label className="block text-sm font-medium text-black">예약 가능한 슬롯 추천</label>
-				<div className="rounded border border-red-600 bg-red-100 p-3 text-sm text-black">{error}</div>
-			</div>
-		);
-	}
-
-	if (isLoading) {
-		return (
-			<div className="space-y-2">
-				<label className="block text-sm font-medium text-black">예약 가능한 슬롯 추천</label>
-				<div className="grid grid-cols-3 gap-2">
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div key={i} className="h-10 animate-pulse rounded border bg-white/50" />
-					))}
-				</div>
-			</div>
-		);
-	}
-
-	if (!data) return null;
-	const available = data.slots.filter(s => s.isAvailable);
-
+	// Hooks는 조건부로 호출하지 않도록, 데이터 유무와 무관하게 미리 계산 가능한 값으로 두고 렌더 단계에서 분기한다.
+	const available = (data?.slots ?? []).filter(s => s.isAvailable);
 	const grouped = useMemo(() => {
 		const g: Record<string, typeof available> = { 오전: [], 오후: [], 저녁: [] };
 		available.forEach(s => {
@@ -57,7 +33,15 @@ export default function SlotRecommendations({ data, onPick, selected, isLoading,
 	return (
 		<div className="space-y-2">
 			<label className="block text-sm font-medium text-black">예약 가능한 슬롯 추천</label>
-			{available.length === 0 ? (
+			{error ? (
+				<div className="rounded border border-red-600 bg-red-100 p-3 text-sm text-black">{error}</div>
+			) : isLoading ? (
+				<div className="grid grid-cols-3 gap-2">
+					{Array.from({ length: 6 }).map((_, i) => (
+						<div key={i} className="h-10 animate-pulse rounded border bg-white/50" />
+					))}
+				</div>
+			) : !data ? null : available.length === 0 ? (
 				<div className="text-sm text-black">선택하신 조건에 맞는 슬롯이 없습니다.</div>
 			) : (
 				<div className="space-y-4">

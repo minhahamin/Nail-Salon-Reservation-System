@@ -8,8 +8,9 @@ export function verifyAdminCredentials(username: string, password: string): bool
 	return username === ADMIN_USER && password === ADMIN_PASS;
 }
 
-export function setAdminSessionCookie() {
-	cookies().set({
+export async function setAdminSessionCookie() {
+	const jar = await cookies();
+	jar.set({
 		name: COOKIE_NAME,
 		value: "ok",
 		httpOnly: true,
@@ -19,8 +20,9 @@ export function setAdminSessionCookie() {
 	});
 }
 
-export function clearAdminSessionCookie() {
-	cookies().set({
+export async function clearAdminSessionCookie() {
+	const jar = await cookies();
+	jar.set({
 		name: COOKIE_NAME,
 		value: "",
 		httpOnly: true,
@@ -29,8 +31,9 @@ export function clearAdminSessionCookie() {
 	});
 }
 
-export function isAdminAuthenticated(): boolean {
-	const c = cookies().get(COOKIE_NAME);
+export async function isAdminAuthenticated(): Promise<boolean> {
+	const jar = await cookies();
+	const c = jar.get(COOKIE_NAME);
 	return c?.value === "ok";
 }
 

@@ -81,6 +81,35 @@ export async function POST(req: NextRequest) {
 	}
 }
 
+// 전화번호로 목록 조회
+export async function GET(req: NextRequest) {
+	try {
+		const phone = req.nextUrl.searchParams.get("phone") ?? "";
+		if (!phone || phone.length < 7) {
+			return NextResponse.json({ message: "Invalid phone" }, { status: 400 });
+		}
+		const ip = getClientIp(req.headers);
+		const r = rateLimit(`booking:list:${ip}`, 10, 60_000);
+		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
+		const list = await prisma.booking.findMany({ where: { customerPhone: phone }, orderBy: { startISO: "asc" } });
+		const data: Booking[] = list.map((b: any) => ({
+			id: b.id,
+			designerId: b.designerId,
+			startISO: b.startISO,
+			endISO: b.endISO,
+			serviceIds: JSON.parse(b.serviceIds),
+			customerName: b.customerName,
+			customerPhone: b.customerPhone,
+			agreedTerms: b.agreedTerms,
+			agreedPrivacy: b.agreedPrivacy,
+			reminderOptIn: b.reminderOptIn,
+		}));
+		return NextResponse.json(data);
+	} catch {
+		return NextResponse.json({ message: "Server error" }, { status: 500 });
+	}
+}
+
 // 조회
 export async function PUT(req: NextRequest) {
 	try {

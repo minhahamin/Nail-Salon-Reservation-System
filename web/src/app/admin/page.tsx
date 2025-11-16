@@ -11,6 +11,9 @@ export default function AdminPage() {
 	const [end, setEnd] = useState<string>("13:00");
 	const [reason, setReason] = useState<string>("");
 	const [tab, setTab] = useState<"dashboard" | "bookings">("dashboard");
+	const [searchPhone, setSearchPhone] = useState<string>("");
+	const [bookingList, setBookingList] = useState<any[]>([]);
+	const [adminMsg, setAdminMsg] = useState<string>("");
 
 	const date = new Date(dateISO);
 	const list = useMemo(() => {
@@ -118,8 +121,68 @@ export default function AdminPage() {
 
 			{tab === "bookings" && (
 				<div className="mt-6 rounded border bg-white/60 p-4">
-					<div className="mb-2 text-sm font-medium">예약 탭</div>
-					<p className="text-sm">좌측 예약 페이지 기능을 참고해 확장 예정입니다. 현재는 읽기용 탭으로 제공됩니다.</p>
+					<div className="mb-2 text-sm font-medium">예약 조회</div>
+					<div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+						<input
+							className="rounded border px-3 py-2 text-black"
+							placeholder="연락처 입력(예: 01012345678)"
+							value={searchPhone}
+							onChange={e => setSearchPhone(e.target.value)}
+						/>
+						<button
+							className="rounded bg-gray-900 px-3 py-2 text-sm text-white hover:bg-black"
+							onClick={async () => {
+								setAdminMsg("");
+								const res = await fetch(`/api/bookings?phone=${encodeURIComponent(searchPhone)}`);
+								if (res.ok) {
+									const data = await res.json();
+									setBookingList(data);
+									if (data.length === 0) setAdminMsg("검색 결과가 없습니다.");
+								} else {
+									setAdminMsg("조회 중 오류가 발생했습니다.");
+								}
+							}}
+						>
+							조회
+						</button>
+					</div>
+					{adminMsg && <div className="mt-2 text-sm">{adminMsg}</div>}
+					<div className="mt-4 space-y-2">
+						{bookingList.map(b => (
+							<div key={b.id} className="flex items-center justify-between rounded border bg-white/70 p-2 text-sm">
+								<div>
+									<div className="font-medium">{formatTimeRange(b.startISO, b.endISO)}</div>
+									<div className="text-xs text-black/70">ID: {b.id} · {b.designerId} · {b.customerName}</div>
+								</div>
+								<div className="flex gap-2">
+									<a
+										className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
+										href={`/api/bookings/${b.id}/ics`}
+										target="_blank"
+									>
+										.ics
+									</a>
+									<button
+										className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+										onClick={async () => {
+											const res = await fetch("/api/bookings", {
+												method: "DELETE",
+												headers: { "Content-Type": "application/json" },
+												body: JSON.stringify({ bookingId: b.id, customerPhone: b.customerPhone }),
+											});
+											if (res.ok) {
+												setBookingList(prev => prev.filter(x => x.id !== b.id));
+											} else {
+												alert("취소 중 오류가 발생했습니다.");
+											}
+										}}
+									>
+										취소
+									</button>
+								</div>
+							</div>
+						))}
+					</div>
 				</div>
 			)}
 		</div>

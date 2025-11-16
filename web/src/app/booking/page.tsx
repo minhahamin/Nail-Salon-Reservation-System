@@ -19,6 +19,7 @@ export default function BookingPage() {
 	const [created, setCreated] = useState<Booking>();
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string>("");
+	const [submitting, setSubmitting] = useState<boolean>(false);
 	const [customerName, setCustomerName] = useState<string>("");
 	const [customerPhone, setCustomerPhone] = useState<string>("");
 	const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
@@ -67,6 +68,7 @@ export default function BookingPage() {
 
 	const handleConfirm = async () => {
 		if (!designerId || !picked || serviceIds.length === 0) return;
+		setSubmitting(true);
 		const res = await fetch("/api/bookings", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -95,8 +97,15 @@ export default function BookingPage() {
 			// 최신 가용성 갱신
 			handleCheck();
 		} else {
-			alert("예약 생성 중 오류가 발생했습니다.");
+			try {
+				const data = await res.json();
+				const msg = data?.message || "예약 생성 중 오류가 발생했습니다.";
+				alert(msg);
+			} catch {
+				alert("예약 생성 중 오류가 발생했습니다.");
+			}
 		}
+		setSubmitting(false);
 	};
 
 	return (
@@ -218,9 +227,9 @@ export default function BookingPage() {
 							type="button"
 							onClick={handleConfirm}
 							className="w-full rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
-							disabled={!customerName || !customerPhone || !agreeTerms || !agreePrivacy}
+							disabled={!customerName || !customerPhone || !agreeTerms || !agreePrivacy || submitting}
 						>
-							예약 확정
+							{ submitting ? "처리 중..." : "예약 확정" }
 						</button>
 					</div>
 				)}
@@ -236,6 +245,7 @@ function UserBookingPanel() {
 	const [phone, setPhone] = useState<string>("");
 	const [booking, setBooking] = useState<Booking>();
 	const [message, setMessage] = useState<string>("");
+	const [list, setList] = useState<Booking[]>([]);
 
 	const lookup = async () => {
 		setMessage("");
@@ -250,6 +260,19 @@ function UserBookingPanel() {
 		} else {
 			setBooking(undefined);
 			setMessage("예약을 찾을 수 없습니다.");
+		}
+	};
+
+	const listByPhone = async () => {
+		setMessage("");
+		setBooking(undefined);
+		const res = await fetch(`/api/bookings?phone=${encodeURIComponent(phone)}`);
+		if (res.ok) {
+			const data: Booking[] = await res.json();
+			setList(data);
+			if (data.length === 0) setMessage("해당 연락처로 등록된 예약이 없습니다.");
+		} else {
+			setMessage("조회 중 오류가 발생했습니다.");
 		}
 	};
 
@@ -293,6 +316,13 @@ function UserBookingPanel() {
 				>
 					조회
 				</button>
+				<button
+					type="button"
+					onClick={listByPhone}
+					className="rounded bg-gray-600 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+				>
+					연락처로 전체 조회
+				</button>
 				{booking && (
 					<button
 						type="button"
@@ -307,6 +337,29 @@ function UserBookingPanel() {
 				<div className="text-sm text-black">
 					예약 시간: <span className="font-medium">{formatTimeRange(booking.startISO, booking.endISO)}</span>
 					<div className="text-xs text-black/70">디자이너: {booking.designerId}</div>
+				</div>
+			)}
+			{list.length > 0 && (
+				<div className="space-y-2">
+					<div className="text-sm font-medium">조회 결과({list.length})</div>
+					{list.map(b => (
+						<div key={b.id} className="flex items-center justify-between rounded border p-2 text-sm">
+							<div>
+								<div className="font-medium">{formatTimeRange(b.startISO, b.endISO)}</div>
+								<div className="text-xs text-black/70">ID: {b.id} · {b.designerId}</div>
+							</div>
+							<button
+								className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+								onClick={async () => {
+									setBooking(b);
+									await cancel();
+									await listByPhone();
+								}}
+							>
+								취소
+							</button>
+						</div>
+					))}
 				</div>
 			)}
 			{message && <div className="text-sm text-black">{message}</div>}

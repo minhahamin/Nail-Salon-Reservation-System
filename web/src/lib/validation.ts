@@ -1,9 +1,11 @@
 import { z } from "zod";
 
+const isValidDateString = (v: string) => !Number.isNaN(new Date(v).getTime());
+
 export const BookingCreateSchema = z.object({
 	designerId: z.string().min(1),
-	startISO: z.string().datetime(),
-	endISO: z.string().datetime(),
+	startISO: z.string().refine(isValidDateString, "Invalid date"),
+	endISO: z.string().refine(isValidDateString, "Invalid date"),
 	serviceIds: z.array(z.string().min(1)).min(1),
 	customerName: z.string().min(1),
 	customerPhone: z.string().min(7),
@@ -20,8 +22,8 @@ export const BookingLookupSchema = z.object({
 export const BookingDeleteSchema = BookingLookupSchema;
 
 export const BookingRescheduleSchema = BookingLookupSchema.extend({
-	startISO: z.string().datetime(),
-	endISO: z.string().datetime(),
+	startISO: z.string().refine(isValidDateString, "Invalid date"),
+	endISO: z.string().refine(isValidDateString, "Invalid date"),
 });
 
 export const AvailabilitySchema = z.object({
