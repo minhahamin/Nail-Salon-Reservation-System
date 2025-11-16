@@ -10,6 +10,7 @@ export default function AdminPage() {
 	const [start, setStart] = useState<string>("12:00");
 	const [end, setEnd] = useState<string>("13:00");
 	const [reason, setReason] = useState<string>("");
+	const [tab, setTab] = useState<"dashboard" | "bookings">("dashboard");
 
 	const date = new Date(dateISO);
 	const list = useMemo(() => {
@@ -41,9 +42,27 @@ export default function AdminPage() {
 		}
 	};
 
+	const logout = async () => {
+		await fetch("/api/admin/login", { method: "DELETE" });
+		location.href = "/admin/login";
+	};
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-pink-50 via-pink-100 to-pink-200 text-black p-6">
-			<h1 className="text-2xl font-semibold">관리자 대시보드</h1>
+			<div className="flex items-center justify-between">
+				<h1 className="text-2xl font-semibold">관리자</h1>
+				<button className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-black" onClick={logout}>
+					로그아웃
+				</button>
+			</div>
+			<div className="mt-4 flex gap-2">
+				<button onClick={() => setTab("dashboard")} className={`rounded px-3 py-2 text-sm ${tab === "dashboard" ? "bg-white/80 border" : "bg-white/40"}`}>
+					대시보드
+				</button>
+				<button onClick={() => setTab("bookings")} className={`rounded px-3 py-2 text-sm ${tab === "bookings" ? "bg-white/80 border" : "bg-white/40"}`}>
+					예약
+				</button>
+			</div>
 			<div className="mt-4 grid gap-4 sm:grid-cols-3">
 				<select className="rounded border px-3 py-2 text-black" value={designerId} onChange={e => setDesignerId(e.target.value)}>
 					{designers.map(d => (
@@ -61,7 +80,8 @@ export default function AdminPage() {
 				<div />
 			</div>
 
-			<div className="mt-6 rounded border bg-white/60 p-4">
+			{tab === "dashboard" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
 				<div className="mb-2 text-sm font-medium">읽기용 캘린더(일)</div>
 				<div className="space-y-2">
 					{list.length === 0 ? (
@@ -77,9 +97,11 @@ export default function AdminPage() {
 						))
 					)}
 				</div>
-			</div>
+				</div>
+			)}
 
-			<div className="mt-6 rounded border bg-white/60 p-4">
+			{tab === "dashboard" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
 				<div className="mb-2 text-sm font-medium">차단 시간 블럭 추가</div>
 				<div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_1fr_auto] items-center">
 					<div className="text-sm">시간</div>
@@ -92,6 +114,14 @@ export default function AdminPage() {
 					</button>
 				</div>
 			</div>
+			)}
+
+			{tab === "bookings" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
+					<div className="mb-2 text-sm font-medium">예약 탭</div>
+					<p className="text-sm">좌측 예약 페이지 기능을 참고해 확장 예정입니다. 현재는 읽기용 탭으로 제공됩니다.</p>
+				</div>
+			)}
 		</div>
 	);
 }
