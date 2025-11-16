@@ -17,6 +17,12 @@ export default function NavBar() {
 						예약
 					</Link>
 					<Link
+						href="/my"
+						className={`rounded px-3 py-1.5 text-sm ${isActive("/my") ? "bg-pink-200 border" : "hover:bg-pink-100"} text-black`}
+					>
+						마이페이지
+					</Link>
+					<Link
 						href="/admin"
 						className={`rounded px-3 py-1.5 text-sm ${isActive("/admin") ? "bg-pink-200 border" : "hover:bg-pink-100"} text-black`}
 					>

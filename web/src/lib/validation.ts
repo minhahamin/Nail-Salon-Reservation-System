@@ -28,7 +28,7 @@ export const BookingRescheduleSchema = BookingLookupSchema.extend({
 
 export const AvailabilitySchema = z.object({
 	designerId: z.string().min(1),
-	dateISO: z.string().datetime(),
+	dateISO: z.string().refine(isValidDateString, "Invalid date"),
 	totalDurationMinutes: z.number().int().positive(),
 	intervalMinutes: z.number().int().positive().optional(),
 	bufferMinutes: z.number().int().nonnegative().optional(),

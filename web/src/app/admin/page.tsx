@@ -1,6 +1,6 @@
 'use client';
 import { designers, existingBookings, manualBlocks } from "@/lib/data";
-import { isSameDay, setTime } from "@/lib/time";
+import { isSameDay, setTime, formatLocalISO } from "@/lib/time";
 import { useMemo, useState } from "react";
 import { formatTimeRange } from "@/lib/format";
 
@@ -14,6 +14,9 @@ export default function AdminPage() {
 	const [searchPhone, setSearchPhone] = useState<string>("");
 	const [bookingList, setBookingList] = useState<any[]>([]);
 	const [adminMsg, setAdminMsg] = useState<string>("");
+	const [rbWeekday, setRbWeekday] = useState<number>(1);
+	const [rbStart, setRbStart] = useState<string>("12:00");
+	const [rbEnd, setRbEnd] = useState<string>("12:30");
 
 	const date = new Date(dateISO);
 	const list = useMemo(() => {
@@ -77,8 +80,11 @@ export default function AdminPage() {
 				<input
 					type="date"
 					className="rounded border px-3 py-2 text-black"
-					value={new Date(dateISO).toISOString().slice(0, 10)}
-					onChange={e => setDateISO(new Date(e.target.value + "T00:00:00").toISOString())}
+					value={dateISO.slice(0, 10)}
+					onChange={e => {
+						const localStart = setTime(new Date(e.target.value), "00:00");
+						setDateISO(formatLocalISO(localStart));
+					}}
 				/>
 				<div />
 			</div>
@@ -117,6 +123,43 @@ export default function AdminPage() {
 					</button>
 				</div>
 			</div>
+			)}
+
+			{tab === "dashboard" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
+					<div className="mb-2 text-sm font-medium">반복 브레이크 추가</div>
+					<div className="grid gap-2 sm:grid-cols-[auto_auto_auto_auto_auto] items-center">
+						<select className="rounded border px-3 py-2 text-black" value={rbWeekday} onChange={e => setRbWeekday(Number(e.target.value))}>
+							<option value={0}>일</option>
+							<option value={1}>월</option>
+							<option value={2}>화</option>
+							<option value={3}>수</option>
+							<option value={4}>목</option>
+							<option value={5}>금</option>
+							<option value={6}>토</option>
+						</select>
+						<input className="rounded border px-3 py-2 text-black" type="time" value={rbStart} onChange={e => setRbStart(e.target.value)} />
+						<span className="px-2 text-sm">~</span>
+						<input className="rounded border px-3 py-2 text-black" type="time" value={rbEnd} onChange={e => setRbEnd(e.target.value)} />
+						<button
+							className="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-black"
+							onClick={async () => {
+								const res = await fetch("/api/admin/recurring-breaks", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({ designerId, weekday: rbWeekday, start: rbStart, end: rbEnd }),
+								});
+								if (res.ok) {
+									alert("반복 브레이크가 등록되었습니다.");
+								} else {
+									alert("등록 실패");
+								}
+							}}
+						>
+							추가
+						</button>
+					</div>
+				</div>
 			)}
 
 			{tab === "bookings" && (
