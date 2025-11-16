@@ -8,6 +8,13 @@ export const designers: Designer[] = [
 		workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
 		holidays: [], // 필요시 날짜 문자열 추가
 		breaks: [{ start: "13:00", end: "14:00" }], // 점심시간
+		recurringBreaks: [{ weekday: 1, start: "16:30", end: "17:00" }], // 매주 월 16:30~17:00
+		specialHours: {
+			// 예: 특정 날짜 연장 영업
+			// "2025-11-20": { start: "09:00", end: "21:00" },
+		},
+		dailyMaxAppointments: 8,
+		dailyMaxMinutes: 8 * 60 + 30,
 	},
 	{
 		id: "dsg-min",
@@ -16,6 +23,10 @@ export const designers: Designer[] = [
 		workHours: { weekday: [2, 3, 4, 5, 6], start: "11:00", end: "20:00" },
 		holidays: [], 
 		breaks: [{ start: "15:00", end: "15:30" }],
+		recurringBreaks: [{ weekday: 4, start: "12:00", end: "12:30" }], // 매주 목 12:00~12:30
+		specialHours: {},
+		dailyMaxAppointments: 7,
+		dailyMaxMinutes: 7 * 60 + 0,
 	},
 ];
 

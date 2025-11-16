@@ -8,6 +8,7 @@ import { AvailabilityResponse, Booking } from "@/lib/types";
 import { formatPriceKRW, formatTimeRange } from "@/lib/format";
 import { useState } from "react";
 import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "@/lib/config";
+import { designers } from "@/lib/data";
 
 export default function BookingPage() {
 	const [designerId, setDesignerId] = useState<string>();
@@ -147,6 +148,8 @@ export default function BookingPage() {
 				{/* 내 예약 조회/취소/변경 */}
 				<UserBookingPanel />
 
+				<ScheduleQuickAdmin selectedDesignerId={designerId} />
+
 				{picked && (
 					<div className="space-y-3 rounded border p-3 text-black">
 						<div className="font-medium text-black">선택된 시간</div>
@@ -267,6 +270,51 @@ function UserBookingPanel() {
 				</div>
 			)}
 			{message && <div className="text-sm text-black">{message}</div>}
+		</div>
+	);
+}
+
+// 반복 브레이크 빠른 편집(데모): 선택된 디자이너에 즉시 적용
+function ScheduleQuickAdmin({ selectedDesignerId }: { selectedDesignerId?: string }) {
+	const [weekday, setWeekday] = useState<number>(1);
+	const [start, setStart] = useState<string>("12:00");
+	const [end, setEnd] = useState<string>("12:30");
+	const d = designers.find(x => x.id === selectedDesignerId);
+
+	const addRecurring = async () => {
+		if (!d) return;
+		const res = await fetch("/api/admin/recurring-breaks", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ designerId: d.id, weekday, start, end }),
+		});
+		if (res.ok) {
+			alert("반복 브레이크가 추가되었습니다. 슬롯을 다시 조회해 확인하세요.");
+		} else {
+			alert("추가 중 오류가 발생했습니다.");
+		}
+	};
+
+	if (!d) return null;
+	return (
+		<div className="space-y-3 rounded border p-3">
+			<div className="font-medium text-black">반복 브레이크 추가(데모)</div>
+			<div className="grid gap-3 sm:grid-cols-3">
+				<select className="rounded border px-3 py-2 text-black" value={weekday} onChange={e => setWeekday(Number(e.target.value))}>
+					<option value={0}>일</option>
+					<option value={1}>월</option>
+					<option value={2}>화</option>
+					<option value={3}>수</option>
+					<option value={4}>목</option>
+					<option value={5}>금</option>
+					<option value={6}>토</option>
+				</select>
+				<input className="rounded border px-3 py-2 text-black" type="time" value={start} onChange={e => setStart(e.target.value)} />
+				<input className="rounded border px-3 py-2 text-black" type="time" value={end} onChange={e => setEnd(e.target.value)} />
+			</div>
+			<button type="button" onClick={addRecurring} className="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-black">
+				추가
+			</button>
 		</div>
 	);
 }
