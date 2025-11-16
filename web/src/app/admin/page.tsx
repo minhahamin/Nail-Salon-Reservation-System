@@ -1,7 +1,7 @@
 'use client';
-import { designers, existingBookings, manualBlocks } from "@/lib/data";
-import { isSameDay, setTime, formatLocalISO } from "@/lib/time";
-import { useMemo, useState } from "react";
+import { designers } from "@/lib/data";
+import { setTime, formatLocalISO } from "@/lib/time";
+import { useEffect, useMemo, useState } from "react";
 import { formatTimeRange } from "@/lib/format";
 
 export default function AdminPage() {
@@ -19,17 +19,34 @@ export default function AdminPage() {
 	const [rbEnd, setRbEnd] = useState<string>("12:30");
 
 	const date = new Date(dateISO);
-	const list = useMemo(() => {
-		const ds = designerId!;
-		const items = [
-			...existingBookings
-				.filter(b => b.designerId === ds && isSameDay(new Date(b.startISO), date))
-				.map(b => ({ kind: "booking" as const, startISO: b.startISO, endISO: b.endISO, label: `예약 ${formatTimeRange(b.startISO, b.endISO)}` })),
-			...manualBlocks
-				.filter(b => b.designerId === ds && isSameDay(new Date(b.startISO), date))
-				.map(b => ({ kind: "block" as const, startISO: b.startISO, endISO: b.endISO, label: `차단 ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}` })),
-		].sort((a, b) => a.startISO.localeCompare(b.startISO));
-		return items;
+	const [list, setList] = useState<{ kind: "booking" | "block"; startISO: string; endISO: string; label: string }[]>([]);
+
+	useEffect(() => {
+		const load = async () => {
+			if (!designerId) return;
+			const res = await fetch(`/api/admin/day?designerId=${encodeURIComponent(designerId)}&date=${dateISO.slice(0, 10)}`);
+			if (res.ok) {
+				const data = await res.json();
+				const items = [
+					...data.bookings.map((b: any) => ({
+						kind: "booking" as const,
+						startISO: b.startISO,
+						endISO: b.endISO,
+						label: `예약 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}`,
+					})),
+					...data.blocks.map((b: any) => ({
+						kind: "block" as const,
+						startISO: b.startISO,
+						endISO: b.endISO,
+						label: `차단 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}`,
+					})),
+				].sort((a, b) => a.startISO.localeCompare(b.startISO));
+				setList(items);
+			} else {
+				setList([]);
+			}
+		};
+		load();
 	}, [designerId, dateISO]);
 
 	const addBlock = async () => {
@@ -176,7 +193,8 @@ export default function AdminPage() {
 							className="rounded bg-gray-900 px-3 py-2 text-sm text-white hover:bg-black"
 							onClick={async () => {
 								setAdminMsg("");
-								const res = await fetch(`/api/bookings?phone=${encodeURIComponent(searchPhone)}`);
+								const query = new URLSearchParams({ phone: searchPhone, designerId: designerId || "" }).toString();
+								const res = await fetch(`/api/bookings?${query}`);
 								if (res.ok) {
 									const data = await res.json();
 									setBookingList(data);
