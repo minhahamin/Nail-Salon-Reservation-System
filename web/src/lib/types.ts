@@ -41,6 +41,9 @@ export type AvailabilityRequest = {
 	dateISO: string; // day to search on
 	totalDurationMinutes: number;
 	intervalMinutes?: number; // slot granularity
+	bufferMinutes?: number; // after service
+	minLeadHours?: number;
+	maxLeadDays?: number;
 };
 
 export type AvailabilityResponse = {

@@ -1,13 +1,22 @@
 import { AvailabilityRequest, AvailabilityResponse, Slot } from "./types";
 import { designers, existingBookings } from "./data";
-import { addMinutes, formatLocalISO, isSameDay, setTime, toMinutes } from "./time";
+import { addMinutes, formatLocalISO, isSameDay, setTime } from "./time";
+import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "./config";
 
 function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
 	return aStart < bEnd && bStart < aEnd;
 }
 
 export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
-	const { dateISO, designerId, totalDurationMinutes, intervalMinutes = 15 } = req;
+	const {
+		dateISO,
+		designerId,
+		totalDurationMinutes,
+		intervalMinutes = 15,
+		bufferMinutes = BUFFER_MINUTES,
+		minLeadHours = MIN_LEAD_HOURS,
+		maxLeadDays = MAX_LEAD_DAYS,
+	} = req;
 	const date = new Date(dateISO);
 	const now = new Date();
 	const designer = designers.find(d => d.id === designerId);
@@ -35,18 +44,20 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 	const bookings = existingBookings
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date))
-		.map(b => ({ start: new Date(b.startISO), end: new Date(b.endISO) }))
+		// 예약 끝에 버퍼를 더해 충돌 검사
+		.map(b => ({ start: new Date(b.startISO), end: addMinutes(new Date(b.endISO), bufferMinutes) }))
 		.sort((a, b) => a.start.getTime() - b.start.getTime());
 
 	// interval 간격으로 후보 생성
 	const slots: Slot[] = [];
 	for (
 		let cursor = new Date(workStart);
-		cursor <= addMinutes(workEnd, -totalDurationMinutes);
+		cursor <= addMinutes(workEnd, -(totalDurationMinutes + bufferMinutes));
 		cursor = addMinutes(cursor, intervalMinutes)
 	) {
 		const slotStart = new Date(cursor);
 		const slotEnd = addMinutes(slotStart, totalDurationMinutes);
+		const slotEndWithBuffer = addMinutes(slotEnd, bufferMinutes);
 
 		// 과거 시간 제외
 		if (slotEnd <= now) {
@@ -59,16 +70,26 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 			continue;
 		}
 
+		// 리드타임 제한
+		const minAllowed = addMinutes(now, minLeadHours * 60);
+		const maxAllowed = addMinutes(now, maxLeadDays * 24 * 60);
+		if (slotStart < minAllowed || slotStart > maxAllowed) {
+			continue;
+		}
+
 		// 근무 시간 벗어남 체크는 루프 조건에서 보장
+		if (slotEndWithBuffer > workEnd) {
+			continue;
+		}
 
 		// 예약 충돌 체크
-		const hasConflict = bookings.some(b => overlaps(slotStart, slotEnd, b.start, b.end));
+		const hasConflict = bookings.some(b => overlaps(slotStart, slotEndWithBuffer, b.start, b.end));
 		// 점심/휴식시간 충돌 체크
 		const hasBreakConflict =
 			designer.breaks?.some(br => {
 				const brStart = setTime(date, br.start);
 				const brEnd = setTime(date, br.end);
-				return overlaps(slotStart, slotEnd, brStart, brEnd);
+				return overlaps(slotStart, slotEndWithBuffer, brStart, brEnd);
 			}) ?? false;
 
 		slots.push({
