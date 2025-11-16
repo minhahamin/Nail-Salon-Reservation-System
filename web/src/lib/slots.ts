@@ -1,5 +1,5 @@
 import { AvailabilityRequest, AvailabilityResponse, Slot } from "./types";
-import { designers, existingBookings } from "./data";
+import { designers, existingBookings, manualBlocks } from "./data";
 import { addMinutes, formatLocalISO, isSameDay, setTime } from "./time";
 import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "./config";
 
@@ -45,13 +45,17 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 		}
 	}
 
-	// 디자이너의 해당 날짜 예약
+	// 디자이너의 해당 날짜 예약/차단
 	const bookings = existingBookings
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date))
 		// 예약 끝에 버퍼를 더해 충돌 검사
 		.map(b => ({ start: new Date(b.startISO), end: addMinutes(new Date(b.endISO), bufferMinutes) }))
 		.sort((a, b) => a.start.getTime() - b.start.getTime());
+	const blocks = manualBlocks
+		.filter(b => b.designerId === designerId)
+		.filter(b => isSameDay(new Date(b.startISO), date))
+		.map(b => ({ start: new Date(b.startISO), end: new Date(b.endISO) }));
 
 	// interval 간격으로 후보 생성
 	const slots: Slot[] = [];
@@ -88,7 +92,7 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 		}
 
 		// 예약 충돌 체크
-		const hasConflict = bookings.some(b => overlaps(slotStart, slotEndWithBuffer, b.start, b.end));
+		const hasConflict = bookings.some(b => overlaps(slotStart, slotEndWithBuffer, b.start, b.end)) || blocks.some(b => overlaps(slotStart, slotEndWithBuffer, b.start, b.end));
 		// 점심/휴식시간 충돌 체크
 		const hasBreakConflict =
 			designer.breaks?.some(br => {

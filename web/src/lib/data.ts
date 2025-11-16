@@ -1,4 +1,4 @@
-import { Designer, Service, Booking } from "./types";
+import { Designer, Service, Booking, Block } from "./types";
 
 export const designers: Designer[] = [
 	{
@@ -58,6 +58,11 @@ export const existingBookings: Booking[] = [
 		customerName: "이영희",
 		customerPhone: "010-1111-1111",
 	},
+];
+
+export const manualBlocks: Block[] = [
+	// 예시: 수기 차단 시간
+	// { id: "blk-1", designerId: "dsg-anna", startISO: "2025-11-20T12:00:00.000", endISO: "2025-11-20T13:00:00.000", reason: "미팅" }
 ];
 
 

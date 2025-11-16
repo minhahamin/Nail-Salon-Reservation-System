@@ -35,6 +35,12 @@ export type Booking = {
 	serviceIds: string[];
 	customerName: string;
 	customerPhone: string;
+	// 정책/동의
+	agreedTerms?: boolean;
+	agreedPrivacy?: boolean;
+	reminderOptIn?: boolean; // 방문 전 알림 수신 동의
+	depositRequired?: boolean;
+	depositPaid?: boolean;
 };
 
 export type Slot = {
@@ -42,6 +48,14 @@ export type Slot = {
 	endISO: string;
 	isAvailable: boolean;
 	reason?: "outside_working_hours" | "conflict" | "past";
+};
+
+export type Block = {
+	id: string;
+	designerId: string;
+	startISO: string;
+	endISO: string;
+	reason?: string;
 };
 
 export type AvailabilityRequest = {

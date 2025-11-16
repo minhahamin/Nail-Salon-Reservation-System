@@ -17,8 +17,13 @@ export default function BookingPage() {
 	const [availability, setAvailability] = useState<AvailabilityResponse>();
 	const [picked, setPicked] = useState<{ startISO: string; endISO: string }>();
 	const [created, setCreated] = useState<Booking>();
+	const [loading, setLoading] = useState<boolean>(false);
+	const [error, setError] = useState<string>("");
 	const [customerName, setCustomerName] = useState<string>("");
 	const [customerPhone, setCustomerPhone] = useState<string>("");
+	const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
+	const [agreePrivacy, setAgreePrivacy] = useState<boolean>(false);
+	const [reminderOptIn, setReminderOptIn] = useState<boolean>(true);
 	const totalDuration = sumDurationMinutes(serviceIds.map(id => services.find(s => s.id === id)?.durationMinutes || 0));
 
 	const handleCheck = async () => {
@@ -27,6 +32,8 @@ export default function BookingPage() {
 			return;
 		}
 		setPicked(undefined);
+		setError("");
+		setLoading(true);
 		const res = await fetch("/api/availability", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -44,7 +51,14 @@ export default function BookingPage() {
 			setAvailability(data);
 		} else {
 			setAvailability(undefined);
+			try {
+				const msg = (await res.json())?.message ?? "가용성 조회 중 오류가 발생했습니다.";
+				setError(msg);
+			} catch {
+				setError("가용성 조회 중 오류가 발생했습니다.");
+			}
 		}
+		setLoading(false);
 	};
 
 	const handlePick = (startISO: string, endISO: string) => {
@@ -63,6 +77,9 @@ export default function BookingPage() {
 				serviceIds,
 				customerName,
 				customerPhone,
+				agreedTerms: agreeTerms,
+				agreedPrivacy: agreePrivacy,
+				reminderOptIn,
 			}),
 		});
 		if (res.ok) {
@@ -72,6 +89,9 @@ export default function BookingPage() {
 			setPicked(undefined);
 			setCustomerName("");
 			setCustomerPhone("");
+			setAgreeTerms(false);
+			setAgreePrivacy(false);
+			setReminderOptIn(true);
 			// 최신 가용성 갱신
 			handleCheck();
 		} else {
@@ -143,7 +163,7 @@ export default function BookingPage() {
 				>
 					예약 가능한 슬롯 확인
 				</button>
-				<SlotRecommendations data={availability} onPick={handlePick} selected={picked} />
+				<SlotRecommendations data={availability} onPick={handlePick} selected={picked} isLoading={loading} error={error} />
 
 				{/* 내 예약 조회/취소/변경 */}
 				<UserBookingPanel />
@@ -174,11 +194,31 @@ export default function BookingPage() {
 								/>
 							</div>
 						</div>
+						<div className="space-y-2 rounded border p-3 bg-white/60">
+							<div className="text-sm font-medium">취소/변경 정책</div>
+							<ul className="list-disc pl-5 text-xs text-black/80">
+								<li>예약 시간 2시간 전까지 무료 변경/취소 가능합니다.</li>
+								<li>무단 노쇼 또는 지각 15분 초과 시 예약 자동 취소될 수 있습니다.</li>
+								<li>고객 보호를 위해 연락처는 예약 확인/리마인드에만 사용됩니다.</li>
+							</ul>
+							<label className="mt-2 flex items-center gap-2 text-sm">
+								<input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} />
+								이용약관에 동의합니다.
+							</label>
+							<label className="flex items-center gap-2 text-sm">
+								<input type="checkbox" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)} />
+								개인정보 처리방침에 동의합니다.
+							</label>
+							<label className="flex items-center gap-2 text-sm">
+								<input type="checkbox" checked={reminderOptIn} onChange={e => setReminderOptIn(e.target.checked)} />
+								방문 전 리마인드 알림 수신에 동의합니다.(알림톡/문자, 추후 연동)
+							</label>
+						</div>
 						<button
 							type="button"
 							onClick={handleConfirm}
 							className="w-full rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
-							disabled={!customerName || !customerPhone}
+							disabled={!customerName || !customerPhone || !agreeTerms || !agreePrivacy}
 						>
 							예약 확정
 						</button>
