@@ -23,8 +23,8 @@ function buildICS({ title, startISO, endISO, description }: { title: string; sta
 		.join("\r\n");
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-	const id = params.id;
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	// DB 우선 조회, 없으면 메모리에서 조회
 	const db = await prisma.booking.findUnique({ where: { id } });
 	let startISO = db?.startISO;
