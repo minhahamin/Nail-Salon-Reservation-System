@@ -113,9 +113,6 @@ export default function BookingPage() {
 		<div className="min-h-screen bg-gradient-to-br from-pink-50 via-pink-100 to-pink-200">
 			<div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 text-black">
 				<h1 className="text-2xl font-semibold text-black">네일샵 예약</h1>
-				<div className="rounded border p-3 text-xs text-black/70">
-					버퍼 {BUFFER_MINUTES}분 · 최소 리드타임 {MIN_LEAD_HOURS}시간 · 최대 {MAX_LEAD_DAYS}일 이내 예약 가능
-				</div>
 				{created && (
 					<div className="rounded border border-green-600 bg-green-100 p-4 text-black">
 						<div className="mb-1 text-lg font-semibold">예약이 완료되었습니다</div>

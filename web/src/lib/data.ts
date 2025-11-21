@@ -7,8 +7,8 @@ export const designers: Designer[] = [
 		specialties: ["basic", "art", "care"],
 		workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
 		holidays: [], // 필요시 날짜 문자열 추가
-		breaks: [{ start: "13:00", end: "14:00" }], // 점심시간
-		recurringBreaks: [{ weekday: 1, start: "16:30", end: "17:00" }], // 매주 월 16:30~17:00
+		breaks: [], // 점심시간
+		recurringBreaks: [], // 매주 특정 요일 브레이크
 		defaultBlocks: [
 			// 예시: 특정 날짜 차단시간
 			// { date: "2025-11-20", start: "12:00", end: "13:00", reason: "미팅" },
@@ -26,8 +26,8 @@ export const designers: Designer[] = [
 		specialties: ["basic", "removal", "care"],
 		workHours: { weekday: [2, 3, 4, 5, 6], start: "11:00", end: "20:00" },
 		holidays: [], 
-		breaks: [{ start: "15:00", end: "15:30" }],
-		recurringBreaks: [{ weekday: 4, start: "12:00", end: "12:30" }], // 매주 목 12:00~12:30
+		breaks: [],
+		recurringBreaks: [], // 매주 특정 요일 브레이크
 		defaultBlocks: [
 			// 예시: 특정 날짜 차단시간
 			// { date: "2025-11-25", start: "14:00", end: "15:00", reason: "교육" },

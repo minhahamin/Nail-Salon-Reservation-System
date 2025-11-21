@@ -18,36 +18,58 @@ export default function AdminPage() {
 	const [rbWeekday, setRbWeekday] = useState<number>(1);
 	const [rbStart, setRbStart] = useState<string>("12:00");
 	const [rbEnd, setRbEnd] = useState<string>("12:30");
+	const [breakStart, setBreakStart] = useState<string>("13:00");
+	const [breakEnd, setBreakEnd] = useState<string>("14:00");
+	const [designerBreaks, setDesignerBreaks] = useState<{
+		breaks: { start: string; end: string }[];
+		recurringBreaks: { weekday: number; start: string; end: string }[];
+		defaultBlocks: { date: string; start: string; end: string; reason?: string }[];
+	} | null>(null);
 
 	const date = new Date(dateISO);
-	const [list, setList] = useState<{ kind: "booking" | "block"; startISO: string; endISO: string; label: string }[]>([]);
+	const [list, setList] = useState<{ kind: "booking" | "block"; id?: string; startISO: string; endISO: string; label: string }[]>([]);
+
+	const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"];
+
+	const loadDesignerBreaks = async () => {
+		if (!designerId) return;
+		const res = await fetch(`/api/admin/recurring-breaks?designerId=${encodeURIComponent(designerId)}`);
+		if (res.ok) {
+			const data = await res.json();
+			setDesignerBreaks(data);
+		}
+	};
+
+	const loadDayData = async () => {
+		if (!designerId) return;
+		const res = await fetch(`/api/admin/day?designerId=${encodeURIComponent(designerId)}&date=${dateISO.slice(0, 10)}`);
+		if (res.ok) {
+			const data = await res.json();
+			const items = [
+				...data.bookings.map((b: any) => ({
+					kind: "booking" as const,
+					id: b.id,
+					startISO: b.startISO,
+					endISO: b.endISO,
+					label: `예약 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}`,
+				})),
+				...data.blocks.map((b: any) => ({
+					kind: "block" as const,
+					id: b.id,
+					startISO: b.startISO,
+					endISO: b.endISO,
+					label: `차단 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}`,
+				})),
+			].sort((a, b) => a.startISO.localeCompare(b.startISO));
+			setList(items);
+		} else {
+			setList([]);
+		}
+	};
 
 	useEffect(() => {
-		const load = async () => {
-			if (!designerId) return;
-			const res = await fetch(`/api/admin/day?designerId=${encodeURIComponent(designerId)}&date=${dateISO.slice(0, 10)}`);
-			if (res.ok) {
-				const data = await res.json();
-				const items = [
-					...data.bookings.map((b: any) => ({
-						kind: "booking" as const,
-						startISO: b.startISO,
-						endISO: b.endISO,
-						label: `예약 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}`,
-					})),
-					...data.blocks.map((b: any) => ({
-						kind: "block" as const,
-						startISO: b.startISO,
-						endISO: b.endISO,
-						label: `차단 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}`,
-					})),
-				].sort((a, b) => a.startISO.localeCompare(b.startISO));
-				setList(items);
-			} else {
-				setList([]);
-			}
-		};
-		load();
+		loadDayData();
+		loadDesignerBreaks();
 	}, [designerId, dateISO]);
 
 	const addBlock = async () => {
@@ -112,9 +134,29 @@ export default function AdminPage() {
 						list.map((item, idx) => (
 							<div
 								key={idx}
-								className={`rounded border px-3 py-2 text-sm ${item.kind === "booking" ? "border-green-600 bg-green-100" : "border-gray-600 bg-gray-100"}`}
+								className={`flex items-center justify-between rounded border px-3 py-2 text-sm ${item.kind === "booking" ? "border-green-600 bg-green-100" : "border-gray-600 bg-gray-100"}`}
 							>
-								{item.label}
+								<span>{item.label}</span>
+								{item.kind === "block" && item.id && (
+									<button
+										className="ml-2 rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+										onClick={async () => {
+											if (!confirm("차단시간을 삭제하시겠습니까?")) return;
+											const res = await fetch("/api/admin/blocks", {
+												method: "DELETE",
+												headers: { "Content-Type": "application/json" },
+												body: JSON.stringify({ blockId: item.id }),
+											});
+											if (res.ok) {
+												loadDayData();
+											} else {
+												alert("삭제 중 오류가 발생했습니다.");
+											}
+										}}
+									>
+										삭제
+									</button>
+								)}
 							</div>
 						))
 					)}
@@ -125,17 +167,140 @@ export default function AdminPage() {
 			{tab === "dashboard" && (
 				<div className="mt-6 rounded border bg-white/60 p-4">
 				<div className="mb-2 text-sm font-medium">차단 시간 블럭 추가</div>
-				<div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_1fr_auto] items-center">
+				<div className="grid gap-2 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_1fr_auto] items-center">
 					<div className="text-sm">시간</div>
-					<input className="rounded border px-3 py-2 text-black" type="time" value={start} onChange={e => setStart(e.target.value)} />
+					<input className="w-full min-w-[140px] rounded border px-3 py-2 text-black" type="time" value={start} onChange={e => setStart(e.target.value)} />
 					<span className="px-2 text-sm">~</span>
-					<input className="rounded border px-3 py-2 text-black" type="time" value={end} onChange={e => setEnd(e.target.value)} />
-					<input className="rounded border px-3 py-2 text-black sm:col-span-2" placeholder="사유(선택)" value={reason} onChange={e => setReason(e.target.value)} />
+					<input className="w-full min-w-[140px] rounded border px-3 py-2 text-black" type="time" value={end} onChange={e => setEnd(e.target.value)} />
+					<input className="rounded border px-3 py-2 text-black" placeholder="사유(선택)" value={reason} onChange={e => setReason(e.target.value)} />
 					<button className="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-black" onClick={addBlock}>
 						추가
 					</button>
 				</div>
 			</div>
+			)}
+
+			{tab === "dashboard" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
+					<div className="mb-4 text-sm font-medium">디자이너별 브레이크타임 및 차단시간</div>
+					{designerBreaks ? (
+						<div className="space-y-4">
+							<div>
+								<div className="mb-2 text-xs font-medium text-black/70">브레이크타임 (점심/휴식)</div>
+								{designerBreaks.breaks.length === 0 ? (
+									<div className="text-xs text-black/60">설정된 브레이크타임이 없습니다.</div>
+								) : (
+									<div className="space-y-1">
+										{designerBreaks.breaks.map((b, idx) => (
+											<div key={idx} className="flex items-center justify-between rounded border bg-blue-50 px-2 py-1 text-xs">
+												<span>{b.start} ~ {b.end}</span>
+												<button
+													className="ml-2 rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700"
+													onClick={async () => {
+														if (!confirm("브레이크타임을 삭제하시겠습니까?")) return;
+														const res = await fetch("/api/admin/breaks", {
+															method: "DELETE",
+															headers: { "Content-Type": "application/json" },
+															body: JSON.stringify({ designerId, start: b.start, end: b.end }),
+														});
+														if (res.ok) {
+															loadDesignerBreaks();
+														} else {
+															alert("삭제 중 오류가 발생했습니다.");
+														}
+													}}
+												>
+													삭제
+												</button>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+							<div>
+								<div className="mb-2 text-xs font-medium text-black/70">반복 브레이크 (매주 특정 요일)</div>
+								{designerBreaks.recurringBreaks.length === 0 ? (
+									<div className="text-xs text-black/60">설정된 반복 브레이크가 없습니다.</div>
+								) : (
+									<div className="space-y-1">
+										{designerBreaks.recurringBreaks.map((rb, idx) => (
+											<div key={idx} className="flex items-center justify-between rounded border bg-purple-50 px-2 py-1 text-xs">
+												<span>
+													매주 {weekdayNames[rb.weekday]}요일 {rb.start} ~ {rb.end}
+												</span>
+												<button
+													className="ml-2 rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700"
+													onClick={async () => {
+														if (!confirm("반복 브레이크를 삭제하시겠습니까?")) return;
+														const res = await fetch("/api/admin/recurring-breaks", {
+															method: "DELETE",
+															headers: { "Content-Type": "application/json" },
+															body: JSON.stringify({ designerId, weekday: rb.weekday, start: rb.start, end: rb.end }),
+														});
+														if (res.ok) {
+															loadDesignerBreaks();
+														} else {
+															alert("삭제 중 오류가 발생했습니다.");
+														}
+													}}
+												>
+													삭제
+												</button>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+							<div>
+								<div className="mb-2 text-xs font-medium text-black/70">기본 차단시간 (특정 날짜)</div>
+								{designerBreaks.defaultBlocks.length === 0 ? (
+									<div className="text-xs text-black/60">설정된 기본 차단시간이 없습니다.</div>
+								) : (
+									<div className="space-y-1">
+										{designerBreaks.defaultBlocks.map((db, idx) => (
+											<div key={idx} className="rounded border bg-orange-50 px-2 py-1 text-xs">
+												{db.date} {db.start} ~ {db.end} {db.reason ? `(${db.reason})` : ""}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					) : (
+						<div className="text-xs text-black/60">로딩 중...</div>
+					)}
+				</div>
+			)}
+
+			{tab === "dashboard" && (
+				<div className="mt-6 rounded border bg-white/60 p-4">
+					<div className="mb-2 text-sm font-medium">브레이크타임 추가</div>
+					<div className="grid gap-2 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_auto] items-center">
+						<div className="text-sm">시간</div>
+						<input className="w-full min-w-[140px] rounded border px-3 py-2 text-black" type="time" value={breakStart} onChange={e => setBreakStart(e.target.value)} />
+						<span className="px-2 text-sm">~</span>
+						<input className="w-full min-w-[140px] rounded border px-3 py-2 text-black" type="time" value={breakEnd} onChange={e => setBreakEnd(e.target.value)} />
+						<button
+							className="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-black"
+							onClick={async () => {
+								const res = await fetch("/api/admin/breaks", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({ designerId, start: breakStart, end: breakEnd }),
+								});
+								if (res.ok) {
+									loadDesignerBreaks();
+									setBreakStart("13:00");
+									setBreakEnd("14:00");
+								} else {
+									alert("등록 실패");
+								}
+							}}
+						>
+							추가
+						</button>
+					</div>
+				</div>
 			)}
 
 			{tab === "dashboard" && (
@@ -163,7 +328,9 @@ export default function AdminPage() {
 									body: JSON.stringify({ designerId, weekday: rbWeekday, start: rbStart, end: rbEnd }),
 								});
 								if (res.ok) {
-									alert("반복 브레이크가 등록되었습니다.");
+									loadDesignerBreaks();
+									setRbStart("12:00");
+									setRbEnd("12:30");
 								} else {
 									alert("등록 실패");
 								}
