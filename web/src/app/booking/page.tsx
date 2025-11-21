@@ -7,7 +7,7 @@ import { sumDurationMinutes } from "@/lib/slots";
 import { AvailabilityResponse, Booking } from "@/lib/types";
 import { formatPriceKRW, formatTimeRange } from "@/lib/format";
 import { useState } from "react";
-import { setTime, formatLocalISO } from "@/lib/time";
+import Calendar from "@/components/Calendar";
 import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "@/lib/config";
 
 
@@ -138,19 +138,11 @@ export default function BookingPage() {
 					</div>
 				)}
 				<div className="grid gap-6">
-				<DesignerSelect selectedDesignerId={designerId} onChange={setDesignerId} />
+				<DesignerSelect selectedDesignerId={designerId} onChange={setDesignerId} dateISO={dateISO} />
 				<ServiceSelect selectedServiceIds={serviceIds} onChange={setServiceIds} />
 				<div className="space-y-2">
 					<label className="block text-sm font-medium text-black">예약 날짜</label>
-					<input
-						type="date"
-						className="w-full rounded border px-3 py-2 text-black"
-						value={dateISO.slice(0, 10)}
-						onChange={e => {
-							const localStart = setTime(new Date(e.target.value), "00:00");
-							setDateISO(formatLocalISO(localStart));
-						}}
-					/>
+					<Calendar designerId={designerId} dateISO={dateISO} onChange={setDateISO} />
 				</div>
 				<div className="rounded border p-3 text-sm sm:flex sm:items-center sm:justify-between text-black">
 					<div className="text-black">

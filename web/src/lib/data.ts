@@ -9,6 +9,10 @@ export const designers: Designer[] = [
 		holidays: [], // 필요시 날짜 문자열 추가
 		breaks: [{ start: "13:00", end: "14:00" }], // 점심시간
 		recurringBreaks: [{ weekday: 1, start: "16:30", end: "17:00" }], // 매주 월 16:30~17:00
+		defaultBlocks: [
+			// 예시: 특정 날짜 차단시간
+			// { date: "2025-11-20", start: "12:00", end: "13:00", reason: "미팅" },
+		],
 		specialHours: {
 			// 예: 특정 날짜 연장 영업
 			// "2025-11-20": { start: "09:00", end: "21:00" },
@@ -24,6 +28,10 @@ export const designers: Designer[] = [
 		holidays: [], 
 		breaks: [{ start: "15:00", end: "15:30" }],
 		recurringBreaks: [{ weekday: 4, start: "12:00", end: "12:30" }], // 매주 목 12:00~12:30
+		defaultBlocks: [
+			// 예시: 특정 날짜 차단시간
+			// { date: "2025-11-25", start: "14:00", end: "15:00", reason: "교육" },
+		],
 		specialHours: {},
 		dailyMaxAppointments: 7,
 		dailyMaxMinutes: 7 * 60 + 0,

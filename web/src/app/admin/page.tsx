@@ -3,6 +3,7 @@ import { designers } from "@/lib/data";
 import { setTime, formatLocalISO } from "@/lib/time";
 import { useEffect, useMemo, useState } from "react";
 import { formatTimeRange } from "@/lib/format";
+import Calendar from "@/components/Calendar";
 
 export default function AdminPage() {
 	const [designerId, setDesignerId] = useState<string>(designers[0]?.id);
@@ -94,15 +95,10 @@ export default function AdminPage() {
 						</option>
 					))}
 				</select>
-				<input
-					type="date"
-					className="rounded border px-3 py-2 text-black"
-					value={dateISO.slice(0, 10)}
-					onChange={e => {
-						const localStart = setTime(new Date(e.target.value), "00:00");
-						setDateISO(formatLocalISO(localStart));
-					}}
-				/>
+				<div className="sm:col-span-2">
+					{/* 관리자도 커스텀 달력 사용 */}
+					<Calendar designerId={designerId || undefined} dateISO={dateISO} onChange={setDateISO} />
+				</div>
 				<div />
 			</div>
 

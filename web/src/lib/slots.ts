@@ -7,6 +7,18 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
 	return aStart < bEnd && bStart < aEnd;
 }
 
+/**
+ * 예약 가능한 슬롯 추천 함수
+ * 
+ * 추천 기준:
+ * - 시간 순서대로 정렬 (랜덤 아님)
+ * - 근무 시작 시간부터 15분 간격으로 생성
+ * - 과거 시간 제외
+ * - 최소 리드타임 이후, 최대 예약 가능 일수 이내만 허용
+ * - 기존 예약/차단 시간과 충돌하지 않는 시간만 추천
+ * - 점심/휴식시간과 겹치지 않는 시간만 추천
+ * - 디자이너의 일일 최대 예약 건수/시간 한도 내에서만 추천
+ */
 export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 	const {
 		dateISO,
@@ -52,10 +64,23 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 		// 예약 끝에 버퍼를 더해 충돌 검사
 		.map(b => ({ start: new Date(b.startISO), end: addMinutes(new Date(b.endISO), bufferMinutes) }))
 		.sort((a, b) => a.start.getTime() - b.start.getTime());
-	const blocks = manualBlocks
+	
+	// 수동 차단시간 (관리자가 설정한 차단)
+	const manualBlocksForDate = manualBlocks
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date))
 		.map(b => ({ start: new Date(b.startISO), end: new Date(b.endISO) }));
+	
+	// 디자이너 기본 차단시간 (디자이너 설정에 포함된 차단)
+	const defaultBlocksForDate = (designer.defaultBlocks || [])
+		.filter(block => block.date === ymd)
+		.map(block => ({
+			start: setTime(date, block.start),
+			end: setTime(date, block.end),
+		}));
+	
+	// 모든 차단시간 합치기
+	const blocks = [...manualBlocksForDate, ...defaultBlocksForDate];
 
 	// interval 간격으로 후보 생성
 	const slots: Slot[] = [];

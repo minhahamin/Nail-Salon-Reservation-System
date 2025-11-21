@@ -14,6 +14,8 @@ export type Designer = {
 	specialHours?: Record<string, { start: string; end: string }>;
 	// 반복 브레이크(매주 특정 요일/시간)
 	recurringBreaks?: { weekday: number; start: string; end: string }[];
+	// 디자이너별 기본 차단시간 (특정 날짜별 차단)
+	defaultBlocks?: { date: string; start: string; end: string; reason?: string }[];
 	// 1일 최대 처리 건수/총 시간(분) 한도
 	dailyMaxAppointments?: number;
 	dailyMaxMinutes?: number;

@@ -33,6 +33,9 @@ export default function SlotRecommendations({ data, onPick, selected, isLoading,
 	return (
 		<div className="space-y-2">
 			<label className="block text-sm font-medium text-black">예약 가능한 슬롯 추천</label>
+			<p className="text-xs text-black/70">
+				기존 예약 및 차단 시간과 겹치지 않는 시간만 시간 순서대로 표시됩니다.
+			</p>
 			{error ? (
 				<div className="rounded border border-red-600 bg-red-100 p-3 text-sm text-black">{error}</div>
 			) : isLoading ? (
