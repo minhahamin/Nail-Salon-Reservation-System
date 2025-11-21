@@ -152,7 +152,7 @@ export default function AdminPage() {
 					<div className="sm:col-span-2 rounded-2xl bg-white/80 backdrop-blur-sm p-4 shadow-lg border border-pink-100">
 						<label className="block text-sm font-semibold text-gray-700 mb-2">예약 날짜</label>
 					<Calendar designerId={designerId || undefined} dateISO={dateISO} onChange={setDateISO} />
-					</div>
+				</div>
 			</div>
 
 			{tab === "dashboard" && (
@@ -223,10 +223,48 @@ export default function AdminPage() {
 						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={end} onChange={e => setEnd(e.target.value)} />
 						<input className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" placeholder="사유(선택)" value={reason} onChange={e => setReason(e.target.value)} />
 						<button className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105" onClick={addBlock}>
-						추가
-					</button>
+							추가
+						</button>
+					</div>
 				</div>
-			</div>
+			)}
+
+			{tab === "dashboard" && (
+				<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">
+					<div className="flex items-center gap-3 mb-4">
+						<div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+							<svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<div className="text-lg font-semibold text-gray-800">브레이크타임 추가</div>
+					</div>
+					<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_auto] items-end">
+						<div className="text-sm font-semibold text-gray-700">시간</div>
+						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakStart} onChange={e => setBreakStart(e.target.value)} />
+						<span className="px-2 text-sm font-medium text-gray-600">~</span>
+						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakEnd} onChange={e => setBreakEnd(e.target.value)} />
+						<button
+							className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+							onClick={async () => {
+								const res = await fetch("/api/admin/breaks", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({ designerId, start: breakStart, end: breakEnd }),
+								});
+								if (res.ok) {
+									loadDesignerBreaks();
+									setBreakStart("13:00");
+									setBreakEnd("14:00");
+								} else {
+									alert("등록 실패");
+								}
+							}}
+						>
+							추가
+						</button>
+					</div>
+				</div>
 			)}
 
 			{tab === "dashboard" && (
@@ -334,44 +372,6 @@ export default function AdminPage() {
 					) : (
 						<div className="text-center py-8 text-gray-500">로딩 중...</div>
 					)}
-				</div>
-			)}
-
-			{tab === "dashboard" && (
-				<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">
-					<div className="flex items-center gap-3 mb-4">
-						<div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-							<svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-							</svg>
-						</div>
-						<div className="text-lg font-semibold text-gray-800">브레이크타임 추가</div>
-					</div>
-					<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_auto] items-end">
-						<div className="text-sm font-semibold text-gray-700">시간</div>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakStart} onChange={e => setBreakStart(e.target.value)} />
-						<span className="px-2 text-sm font-medium text-gray-600">~</span>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakEnd} onChange={e => setBreakEnd(e.target.value)} />
-						<button
-							className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
-							onClick={async () => {
-								const res = await fetch("/api/admin/breaks", {
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({ designerId, start: breakStart, end: breakEnd }),
-								});
-								if (res.ok) {
-									loadDesignerBreaks();
-									setBreakStart("13:00");
-									setBreakEnd("14:00");
-								} else {
-									alert("등록 실패");
-								}
-							}}
-						>
-							추가
-						</button>
-					</div>
 				</div>
 			)}
 
