@@ -1,0 +1,6 @@
+refactor: Nixpacks 설정 단순화 및 package.json 업데이트
+
+- nixpacks.toml에서 불필요한 setup 단계를 제거하고 설치 명령어를 간소화함
+- web/nixpacks.toml을 업데이트하여 명령어에서 중복된 디렉토리 변경을 제거함
+- package.json에 Node.js 엔진 요구사항을 추가하여 호환성 향상함
+
