@@ -5,7 +5,7 @@ export const designers: Designer[] = [
 		id: "dsg-anna",
 		name: "Anna",
 		specialties: ["basic", "art", "care"],
-		workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
+		workHours: { weekday: [0, 1, 2, 3, 4, 5, 6], start: "10:00", end: "19:00" },
 		holidays: [], // 필요시 날짜 문자열 추가
 		breaks: [], // 점심시간
 		recurringBreaks: [], // 매주 특정 요일 브레이크
@@ -24,7 +24,7 @@ export const designers: Designer[] = [
 		id: "dsg-min",
 		name: "Min",
 		specialties: ["basic", "removal", "care"],
-		workHours: { weekday: [2, 3, 4, 5, 6], start: "11:00", end: "20:00" },
+		workHours: { weekday: [0, 1, 2, 3, 4, 5, 6], start: "11:00", end: "20:00" },
 		holidays: [], 
 		breaks: [],
 		recurringBreaks: [], // 매주 특정 요일 브레이크

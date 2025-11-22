@@ -123,7 +123,9 @@ export async function PUT(req: NextRequest) {
 		const ip = getClientIp(req.headers);
 		const r = rateLimit(`booking:lookup:${ip}`, 10, 60_000);
 		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
-		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone } });
+		const where: any = { id: bookingId };
+		if (customerPhone) where.customerPhone = customerPhone;
+		const b = await prisma.booking.findFirst({ where });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		const data: Booking = {
 			id: b.id,

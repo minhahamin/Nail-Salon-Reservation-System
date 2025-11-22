@@ -16,7 +16,7 @@ export const BookingCreateSchema = z.object({
 
 export const BookingLookupSchema = z.object({
 	bookingId: z.string().min(1),
-	customerPhone: z.string().min(7),
+	customerPhone: z.string().min(7).optional(),
 });
 
 export const BookingDeleteSchema = BookingLookupSchema;

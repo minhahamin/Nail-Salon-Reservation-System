@@ -4,6 +4,7 @@ import { formatTimeRange } from "@/lib/format";
 import { Booking } from "@/lib/types";
 
 export default function MyPage() {
+	const [searchType, setSearchType] = useState<"phone" | "bookingId">("phone");
 	const [phone, setPhone] = useState("");
 	const [bookingId, setBookingId] = useState("");
 	const [list, setList] = useState<Booking[]>([]);
@@ -32,7 +33,7 @@ export default function MyPage() {
 		const res = await fetch("/api/bookings", {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ bookingId, customerPhone: phone }),
+			body: JSON.stringify({ bookingId, customerPhone: phone || undefined }),
 		});
 		if (res.ok) {
 			const data: Booking = await res.json();
@@ -78,42 +79,91 @@ export default function MyPage() {
 						</div>
 						<div className="text-lg font-semibold text-gray-800">내 예약 조회</div>
 					</div>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div>
-							<label className="mb-2 block text-sm font-semibold text-gray-700">연락처</label>
-							<input
-								className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
-								placeholder="01012345678"
-								value={phone}
-								onChange={e => setPhone(e.target.value)}
-							/>
-						</div>
-						<div>
-							<label className="mb-2 block text-sm font-semibold text-gray-700">예약번호 (선택)</label>
-							<input
-								className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
-								placeholder="예약번호 입력"
-								value={bookingId}
-								onChange={e => setBookingId(e.target.value)}
-							/>
-						</div>
-					</div>
-					<div className="mt-4 flex gap-3">
-						<button 
-							className="flex-1 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100" 
-							onClick={fetchByPhone} 
-							disabled={!phone || loading}
+					
+					{/* 조회 방식 선택 */}
+					<div className="mb-4 flex gap-2 bg-gray-100 rounded-xl p-1">
+						<button
+							type="button"
+							className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+								searchType === "phone"
+									? "bg-white text-pink-600 shadow-sm"
+									: "text-gray-600 hover:text-gray-800"
+							}`}
+							onClick={() => {
+								setSearchType("phone");
+								setBookingId("");
+								setMessage("");
+							}}
 						>
-							{loading ? "조회 중..." : "연락처로 전체 조회"}
+							📞 연락처로 조회
 						</button>
-						<button 
-							className="flex-1 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100" 
-							onClick={fetchById} 
-							disabled={!phone || !bookingId || loading}
+						<button
+							type="button"
+							className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+								searchType === "bookingId"
+									? "bg-white text-pink-600 shadow-sm"
+									: "text-gray-600 hover:text-gray-800"
+							}`}
+							onClick={() => {
+								setSearchType("bookingId");
+								setPhone("");
+								setMessage("");
+							}}
 						>
-							예약번호로 조회
+							🎫 예약번호로 조회
 						</button>
 					</div>
+
+					{/* 입력 필드 */}
+					<div className="mb-4">
+						{searchType === "phone" ? (
+							<div>
+								<label className="mb-2 block text-sm font-semibold text-gray-700">연락처</label>
+								<input
+									className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+									placeholder="01012345678"
+									value={phone}
+									onChange={e => setPhone(e.target.value)}
+									onKeyDown={e => e.key === "Enter" && phone && !loading && fetchByPhone()}
+								/>
+							</div>
+						) : (
+							<div>
+								<label className="mb-2 block text-sm font-semibold text-gray-700">예약번호</label>
+								<input
+									className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+									placeholder="예약번호 입력"
+									value={bookingId}
+									onChange={e => setBookingId(e.target.value)}
+									onKeyDown={e => e.key === "Enter" && bookingId && !loading && fetchById()}
+								/>
+								<div className="mt-2">
+									<label className="mb-2 block text-sm font-semibold text-gray-700">
+										연락처 <span className="text-xs font-normal text-gray-500">(선택사항)</span>
+									</label>
+									<input
+										className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+										placeholder="01012345678 (선택사항)"
+										value={phone}
+										onChange={e => setPhone(e.target.value)}
+										onKeyDown={e => e.key === "Enter" && bookingId && !loading && fetchById()}
+									/>
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* 조회 버튼 */}
+					<button 
+						className="w-full rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100" 
+						onClick={searchType === "phone" ? fetchByPhone : fetchById}
+						disabled={
+							loading || 
+							(searchType === "phone" ? !phone : !bookingId)
+						}
+					>
+						{loading ? "조회 중..." : searchType === "phone" ? "연락처로 전체 조회" : "예약번호로 조회"}
+					</button>
 					{message && (
 						<div className={`mt-4 p-3 rounded-xl text-sm ${
 							message.includes("오류") || message.includes("없습니다") 
@@ -135,25 +185,40 @@ export default function MyPage() {
 							</div>
 							<div>
 								<div className="text-xs text-gray-500 font-medium">선택된 예약</div>
-								<div className="text-lg font-bold text-gray-800">{formatTimeRange(detail.startISO, detail.endISO)}</div>
+								{(() => {
+									const startDate = new Date(detail.startISO);
+									const dateStr = startDate.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+									return <div className="text-lg font-bold text-gray-800">{dateStr} {formatTimeRange(detail.startISO, detail.endISO)}</div>;
+								})()}
 							</div>
 						</div>
 						<div className="text-xs text-gray-600 mb-4">ID: {detail.id} · 디자이너: {detail.designerId}</div>
-						<div className="flex gap-3">
-							<a 
-								className="flex-1 rounded-xl border-2 border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all text-center" 
-								href={`/api/bookings/${detail.id}/ics`} 
-								target="_blank"
-							>
-								📅 캘린더 추가 (.ics)
-							</a>
-							<button 
-								className="flex-1 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105" 
-								onClick={() => cancel(detail)}
-							>
-								예약 취소
-							</button>
-						</div>
+						{(() => {
+							const now = new Date();
+							const isPast = new Date(detail.endISO) < now;
+							return (
+								<div className="flex gap-3">
+									<a 
+										className="flex-1 rounded-xl border-2 border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all text-center" 
+										href={`/api/bookings/${detail.id}/ics`} 
+										target="_blank"
+									>
+										📅 캘린더에 추가
+									</a>
+									<button 
+										className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+											isPast
+												? "bg-gray-300 text-gray-500 cursor-not-allowed"
+												: "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md hover:shadow-lg hover:scale-105"
+										}`}
+										onClick={() => !isPast && cancel(detail)}
+										disabled={isPast}
+									>
+										{isPast ? "지난 예약" : "예약 취소"}
+									</button>
+								</div>
+							);
+						})()}
 					</div>
 				)}
 
@@ -168,30 +233,41 @@ export default function MyPage() {
 							<div className="text-lg font-semibold text-gray-800">내 예약 목록 ({list.length})</div>
 						</div>
 						<div className="space-y-3">
-							{list.map(b => (
+							{list.map(b => {
+								const startDate = new Date(b.startISO);
+								const dateStr = startDate.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+								const now = new Date();
+								const isPast = new Date(b.endISO) < now;
+								return (
 								<div key={b.id} className="flex items-center justify-between rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 hover:border-pink-300 hover:shadow-md transition-all">
-									<div>
-										<div className="font-semibold text-gray-800">{formatTimeRange(b.startISO, b.endISO)}</div>
+								<div>
+										<div className="font-semibold text-gray-800">{dateStr} {formatTimeRange(b.startISO, b.endISO)}</div>
 										<div className="text-xs text-gray-500 mt-1">ID: {b.id} · 디자이너: {b.designerId}</div>
-									</div>
-									<div className="flex gap-2">
+								</div>
+								<div className="flex gap-2">
 										<a 
 											className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
 											href={`/api/bookings/${b.id}/ics`} 
 											target="_blank"
 										>
-											.ics
+											📅 캘린더 추가
 										</a>
 										<button 
-											className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105" 
-											onClick={() => cancel(b)}
+											className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+												isPast
+													? "bg-gray-300 text-gray-500 cursor-not-allowed"
+													: "bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-md hover:scale-105"
+											}`}
+											onClick={() => !isPast && cancel(b)}
+											disabled={isPast}
 										>
-											취소
+											{isPast ? "지난 예약" : "취소"}
 										</button>
 									</div>
 								</div>
-							))}
-						</div>
+								);
+							})}
+							</div>
 					</div>
 				)}
 			</div>
