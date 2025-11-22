@@ -69,7 +69,7 @@ export default function ServiceSelect({ selectedServiceIds, onChange }: Props) {
 	return (
 		<div className="space-y-3">
 			<label className="block text-sm font-medium text-black">시술 메뉴 선택</label>
-			<div className="grid grid-cols-2 gap-3">
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				{services.map((s: Service) => {
 					const selected = selectedServiceIds.includes(s.id);
 					const categoryColor = getCategoryColor(s.category);
@@ -78,17 +78,17 @@ export default function ServiceSelect({ selectedServiceIds, onChange }: Props) {
 							key={s.id}
 							type="button"
 							onClick={() => toggle(s.id)}
-							className={`relative rounded-lg border-2 p-4 transition-all hover:scale-105 ${
+							className={`relative rounded-lg border-2 p-4 transition-all hover:scale-[1.02] ${
 								selected
-									? "border-pink-600 bg-pink-100 shadow-md"
+									? "border-pink-600 bg-pink-50 shadow-md ring-2 ring-pink-200"
 									: "border-gray-300 bg-white hover:border-pink-400 hover:bg-pink-50"
 							}`}
 							aria-pressed={selected}
 						>
-							<div className="flex flex-col space-y-3">
+							<div className="flex items-center gap-4">
 								{/* 아이콘 */}
 								<div
-									className={`h-12 w-12 rounded-xl flex items-center justify-center text-white ${
+									className={`h-14 w-14 flex-shrink-0 rounded-xl flex items-center justify-center text-white shadow-sm ${
 										selected
 											? `bg-gradient-to-br ${categoryColor}`
 											: `bg-gradient-to-br ${categoryColor} opacity-70`
@@ -97,27 +97,31 @@ export default function ServiceSelect({ selectedServiceIds, onChange }: Props) {
 									{getCategoryIcon(s.category)}
 								</div>
 								
-								{/* 시술 정보 */}
-								<div className="text-left">
-									<div className="font-semibold text-black mb-1">{s.name}</div>
-									<div className="flex items-center gap-2 text-xs text-gray-600">
-										<span className="flex items-center gap-1">
-											<svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								{/* 시술 정보 - 아이콘 옆에 배치 */}
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold text-black mb-1.5 text-base">{s.name}</div>
+									<div className="flex flex-col gap-1.5 text-sm">
+										<div className="flex items-center gap-2 text-gray-600">
+											<svg className="h-4 w-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 											</svg>
-											{Math.round(s.durationMinutes)}분
-										</span>
-										<span>·</span>
-										<span className="font-semibold text-pink-600">{formatPriceKRW(s.price)}</span>
+											<span>소요시간: {Math.round(s.durationMinutes)}분</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<svg className="h-4 w-4 text-pink-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span className="font-bold text-pink-600 text-base">{formatPriceKRW(s.price)}</span>
+										</div>
 									</div>
 								</div>
 							</div>
 							
 							{/* 선택 체크 아이콘 */}
 							{selected && (
-								<div className="absolute top-2 right-2">
-									<div className="h-5 w-5 rounded-full bg-pink-600 flex items-center justify-center shadow-sm">
-										<svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<div className="absolute top-3 right-3">
+									<div className="h-6 w-6 rounded-full bg-pink-600 flex items-center justify-center shadow-sm">
+										<svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
 										</svg>
 									</div>
