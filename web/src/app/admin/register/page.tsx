@@ -1,52 +1,62 @@
 'use client';
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
-export default function AdminLoginPage() {
+export default function AdminRegisterPage() {
+	const router = useRouter();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState("");
+	const [success, setSuccess] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
-
-	useEffect(() => {
-		// 관리자 계정 존재 여부 확인
-		const checkAdmin = async () => {
-			try {
-				const res = await fetch("/api/admin/check");
-				if (res.ok) {
-					const data = await res.json();
-					setHasAdmin(data.exists);
-				}
-			} catch {
-				setHasAdmin(null);
-			}
-		};
-		checkAdmin();
-	}, []);
 
 	const submit = async (e?: FormEvent) => {
 		e?.preventDefault();
-		if (!username || !password) {
-			setError("아이디와 비밀번호를 입력해주세요.");
+		
+		if (!username || !password || !confirmPassword) {
+			setError("모든 필드를 입력해주세요.");
+			return;
+		}
+		
+		if (username.length < 3) {
+			setError("사용자명은 최소 3자 이상이어야 합니다.");
+			return;
+		}
+		
+		if (password.length < 4) {
+			setError("비밀번호는 최소 4자 이상이어야 합니다.");
+			return;
+		}
+		
+		if (password !== confirmPassword) {
+			setError("비밀번호가 일치하지 않습니다.");
 			return;
 		}
 		
 		setError("");
+		setSuccess("");
 		setIsLoading(true);
 		
 		try {
-			const res = await fetch("/api/admin/login", {
+			const res = await fetch("/api/admin/register", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ username, password }),
 			});
+			
+			const data = await res.json();
+			
 			if (res.ok) {
-				location.href = "/admin";
+				setSuccess("관리자 계정이 생성되었습니다. 로그인 페이지로 이동합니다...");
+				setTimeout(() => {
+					router.push("/admin/login");
+				}, 2000);
 			} else {
-				setError("아이디 또는 비밀번호가 올바르지 않습니다.");
+				setError(data.message || "계정 생성 중 오류가 발생했습니다.");
 			}
 		} catch (err) {
-			setError("로그인 중 오류가 발생했습니다.");
+			setError("계정 생성 중 오류가 발생했습니다.");
 		} finally {
 			setIsLoading(false);
 		}
@@ -59,20 +69,20 @@ export default function AdminLoginPage() {
 				<div className="text-center mb-8">
 					<div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 mb-4 shadow-lg">
 						<svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
 						</svg>
 					</div>
-					<h1 className="text-3xl font-bold text-gray-800 mb-2">관리자 로그인</h1>
-					<p className="text-gray-600 text-sm">네일 살롱 예약 관리 시스템</p>
+					<h1 className="text-3xl font-bold text-gray-800 mb-2">관리자 등록</h1>
+					<p className="text-gray-600 text-sm">새 관리자 계정을 생성합니다</p>
 				</div>
 
-				{/* 로그인 카드 */}
+				{/* 등록 카드 */}
 				<div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
 					<form onSubmit={submit} className="space-y-5">
-						{/* 아이디 입력 */}
+						{/* 사용자명 입력 */}
 						<div>
 							<label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-								아이디
+								사용자명
 							</label>
 							<div className="relative">
 								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -84,7 +94,7 @@ export default function AdminLoginPage() {
 									id="username"
 									type="text"
 									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
-									placeholder="아이디를 입력하세요"
+									placeholder="사용자명을 입력하세요 (최소 3자)"
 									value={username}
 									onChange={e => setUsername(e.target.value)}
 									disabled={isLoading}
@@ -108,11 +118,35 @@ export default function AdminLoginPage() {
 									id="password"
 									type="password"
 									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
-									placeholder="비밀번호를 입력하세요"
+									placeholder="비밀번호를 입력하세요 (최소 4자)"
 									value={password}
 									onChange={e => setPassword(e.target.value)}
 									disabled={isLoading}
-									autoComplete="current-password"
+									autoComplete="new-password"
+								/>
+							</div>
+						</div>
+
+						{/* 비밀번호 확인 */}
+						<div>
+							<label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+								비밀번호 확인
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+									</svg>
+								</div>
+								<input
+									id="confirmPassword"
+									type="password"
+									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400"
+									placeholder="비밀번호를 다시 입력하세요"
+									value={confirmPassword}
+									onChange={e => setConfirmPassword(e.target.value)}
+									disabled={isLoading}
+									autoComplete="new-password"
 								/>
 							</div>
 						</div>
@@ -127,7 +161,17 @@ export default function AdminLoginPage() {
 							</div>
 						)}
 
-						{/* 로그인 버튼 */}
+						{/* 성공 메시지 */}
+						{success && (
+							<div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+								<svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+									<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+								</svg>
+								<span className="text-sm">{success}</span>
+							</div>
+						)}
+
+						{/* 등록 버튼 */}
 						<button
 							type="submit"
 							disabled={isLoading}
@@ -139,11 +183,11 @@ export default function AdminLoginPage() {
 										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
 										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 									</svg>
-									<span>로그인 중...</span>
+									<span>등록 중...</span>
 								</>
 							) : (
 								<>
-									<span>로그인</span>
+									<span>계정 등록</span>
 									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
 									</svg>
@@ -152,58 +196,18 @@ export default function AdminLoginPage() {
 						</button>
 					</form>
 
-					{/* 등록 링크 */}
-					<div className="mt-6 pt-6 border-t border-gray-200">
-						<div className="text-center">
-							<p className="text-sm text-gray-600 mb-3">
-								계정이 없으신가요?
-							</p>
-							<a
-								href="/admin/register"
-								className="inline-flex items-center gap-2 text-sm font-semibold text-pink-600 hover:text-pink-700 transition-colors"
-							>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-								</svg>
-								관리자 계정 등록하기
-							</a>
-						</div>
+					{/* 로그인 링크 */}
+					<div className="mt-6 text-center">
+						<a
+							href="/admin/login"
+							className="text-sm text-pink-600 hover:text-pink-700 font-medium"
+						>
+							이미 계정이 있으신가요? 로그인하기
+						</a>
 					</div>
 				</div>
-
-				{/* 관리자 계정이 없을 때 안내 */}
-				{hasAdmin === false && (
-					<div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-						<div className="flex items-start gap-3">
-							<svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-								<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-							</svg>
-							<div className="flex-1">
-								<p className="text-sm font-medium text-blue-900 mb-1">관리자 계정이 없습니다</p>
-								<p className="text-xs text-blue-700 mb-2">
-									시스템을 사용하려면 먼저 관리자 계정을 등록해주세요.
-								</p>
-								<a
-									href="/admin/register"
-									className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
-								>
-									지금 등록하기
-									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-									</svg>
-								</a>
-							</div>
-						</div>
-					</div>
-				)}
-
-				{/* 하단 안내 */}
-				<p className="text-center text-gray-500 text-xs mt-6">
-					관리자 전용 페이지입니다
-				</p>
 			</div>
 		</div>
 	);
 }
-
 

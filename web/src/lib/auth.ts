@@ -1,11 +1,24 @@
 import { cookies } from "next/headers";
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
 
-export const ADMIN_USER = process.env.ADMIN_USERNAME || "admin";
-export const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin1234";
 const COOKIE_NAME = "admin_session";
 
-export function verifyAdminCredentials(username: string, password: string): boolean {
-	return username === ADMIN_USER && password === ADMIN_PASS;
+export async function verifyAdminCredentials(username: string, password: string): Promise<boolean> {
+	try {
+		const admin = await prisma.admin.findUnique({
+			where: { username },
+		});
+		
+		if (!admin) {
+			return false;
+		}
+		
+		return await bcrypt.compare(password, admin.password);
+	} catch (error) {
+		console.error("Error verifying admin credentials:", error);
+		return false;
+	}
 }
 
 export async function setAdminSessionCookie() {
