@@ -58,11 +58,11 @@ export default function AdminPage() {
 			if (!designerId) return;
 			const res = await fetch(`/api/admin/day?designerId=${encodeURIComponent(designerId)}&date=${dateISO.slice(0, 10)}`);
 			if (res.ok) {
-				const data = await res.json() as { 
-					bookings: Array<Pick<Booking, 'id' | 'startISO' | 'endISO'>>; 
-					blocks: Array<Pick<Block, 'id' | 'startISO' | 'endISO' | 'reason'>>;
-					breaks?: Array<{ startISO: string; endISO: string; label: string }>;
-				};
+			const data = await res.json() as { 
+				bookings: Array<Pick<Booking, 'id' | 'startISO' | 'endISO'>>; 
+				blocks: Array<Pick<Block, 'id' | 'startISO' | 'endISO' | 'reason'>>;
+				breaks?: Array<{ startISO: string; endISO: string; label: string; type: "break" | "recurringBreak" }>;
+			};
 				const items = [
 					...data.bookings.map((b) => ({
 						kind: "booking" as const,
