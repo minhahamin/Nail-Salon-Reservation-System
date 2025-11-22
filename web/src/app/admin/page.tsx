@@ -15,11 +15,12 @@ export default function AdminPage() {
 	const [searchPhone, setSearchPhone] = useState<string>("");
 	const [bookingList, setBookingList] = useState<any[]>([]);
 	const [adminMsg, setAdminMsg] = useState<string>("");
-	const [rbWeekday, setRbWeekday] = useState<number>(1);
-	const [rbStart, setRbStart] = useState<string>("12:00");
-	const [rbEnd, setRbEnd] = useState<string>("12:30");
 	const [breakStart, setBreakStart] = useState<string>("13:00");
 	const [breakEnd, setBreakEnd] = useState<string>("14:00");
+	const [isAllDayBlock, setIsAllDayBlock] = useState<boolean>(false);
+	const [isAllDayBreak, setIsAllDayBreak] = useState<boolean>(false);
+	const [isRecurringBreak, setIsRecurringBreak] = useState<boolean>(false);
+	const [breakWeekday, setBreakWeekday] = useState<number>(1);
 	const [designerBreaks, setDesignerBreaks] = useState<{
 		breaks: { start: string; end: string }[];
 		recurringBreaks: { weekday: number; start: string; end: string }[];
@@ -74,14 +75,20 @@ export default function AdminPage() {
 
 	const addBlock = async () => {
 		if (!designerId) return;
-		const s = setTime(new Date(dateISO), start).toISOString();
-		const e = setTime(new Date(dateISO), end).toISOString();
+		const actualStart = isAllDayBlock ? "00:00" : start;
+		const actualEnd = isAllDayBlock ? "23:59" : end;
+		const s = setTime(new Date(dateISO), actualStart).toISOString();
+		const e = setTime(new Date(dateISO), actualEnd).toISOString();
 		const res = await fetch("/api/admin/blocks", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ designerId, startISO: s, endISO: e, reason }),
+			body: JSON.stringify({ designerId, startISO: s, endISO: e, reason: isAllDayBlock ? (reason || "하루종일") : reason }),
 		});
 		if (res.ok) {
+			setIsAllDayBlock(false);
+			setStart("12:00");
+			setEnd("13:00");
+			setReason("");
 			location.reload();
 		} else {
 			alert("차단 등록 실패");
@@ -216,15 +223,47 @@ export default function AdminPage() {
 						</div>
 						<div className="text-lg font-semibold text-gray-800">차단 시간 추가</div>
 					</div>
-					<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_1fr_auto] items-end">
-						<div className="text-sm font-semibold text-gray-700">시간</div>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={start} onChange={e => setStart(e.target.value)} />
-						<span className="px-2 text-sm font-medium text-gray-600">~</span>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={end} onChange={e => setEnd(e.target.value)} />
-						<input className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" placeholder="사유(선택)" value={reason} onChange={e => setReason(e.target.value)} />
-						<button className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105" onClick={addBlock}>
-							추가
-						</button>
+					<div className="space-y-4">
+						<div className="flex items-center gap-2">
+							<input
+								type="checkbox"
+								id="allDayBlock"
+								checked={isAllDayBlock}
+								onChange={e => {
+									setIsAllDayBlock(e.target.checked);
+									if (e.target.checked) {
+										setStart("00:00");
+										setEnd("23:59");
+									}
+								}}
+								className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+							/>
+							<label htmlFor="allDayBlock" className="text-sm font-medium text-gray-700 cursor-pointer">
+								하루종일
+							</label>
+						</div>
+						<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_1fr_auto] items-end">
+							<div className="text-sm font-semibold text-gray-700">시간</div>
+							<input 
+								className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed" 
+								type="time" 
+								value={start} 
+								onChange={e => setStart(e.target.value)}
+								disabled={isAllDayBlock}
+							/>
+							<span className="px-2 text-sm font-medium text-gray-600">~</span>
+							<input 
+								className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed" 
+								type="time" 
+								value={end} 
+								onChange={e => setEnd(e.target.value)}
+								disabled={isAllDayBlock}
+							/>
+							<input className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" placeholder="사유(선택)" value={reason} onChange={e => setReason(e.target.value)} />
+							<button className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105" onClick={addBlock}>
+								추가
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
@@ -239,30 +278,133 @@ export default function AdminPage() {
 						</div>
 						<div className="text-lg font-semibold text-gray-800">브레이크타임 추가</div>
 					</div>
-					<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_auto] items-end">
-						<div className="text-sm font-semibold text-gray-700">시간</div>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakStart} onChange={e => setBreakStart(e.target.value)} />
-						<span className="px-2 text-sm font-medium text-gray-600">~</span>
-						<input className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={breakEnd} onChange={e => setBreakEnd(e.target.value)} />
-						<button
-							className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
-							onClick={async () => {
-								const res = await fetch("/api/admin/breaks", {
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({ designerId, start: breakStart, end: breakEnd }),
-								});
-								if (res.ok) {
-									loadDesignerBreaks();
-									setBreakStart("13:00");
-									setBreakEnd("14:00");
-								} else {
-									alert("등록 실패");
-								}
-							}}
-						>
-							추가
-						</button>
+					<div className="space-y-4">
+						{/* 적용 방식 선택 */}
+						<div className="flex items-center gap-4">
+							<div className="flex items-center gap-2">
+								<input
+									type="radio"
+									id="breakDaily"
+									name="breakType"
+									checked={!isRecurringBreak}
+									onChange={() => setIsRecurringBreak(false)}
+									className="h-4 w-4 border-gray-300 text-pink-600 focus:ring-pink-500"
+								/>
+								<label htmlFor="breakDaily" className="text-sm font-medium text-gray-700 cursor-pointer">
+									매일 적용
+								</label>
+							</div>
+							<div className="flex items-center gap-2">
+								<input
+									type="radio"
+									id="breakRecurring"
+									name="breakType"
+									checked={isRecurringBreak}
+									onChange={() => setIsRecurringBreak(true)}
+									className="h-4 w-4 border-gray-300 text-pink-600 focus:ring-pink-500"
+								/>
+								<label htmlFor="breakRecurring" className="text-sm font-medium text-gray-700 cursor-pointer">
+									특정 요일만
+								</label>
+							</div>
+						</div>
+
+						{/* 요일 선택 (특정 요일만 선택 시) */}
+						{isRecurringBreak && (
+							<div className="flex items-center gap-2">
+								<label className="text-sm font-semibold text-gray-700">요일</label>
+								<select 
+									className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+									value={breakWeekday} 
+									onChange={e => setBreakWeekday(Number(e.target.value))}
+								>
+									<option value={0}>일요일</option>
+									<option value={1}>월요일</option>
+									<option value={2}>화요일</option>
+									<option value={3}>수요일</option>
+									<option value={4}>목요일</option>
+									<option value={5}>금요일</option>
+									<option value={6}>토요일</option>
+								</select>
+							</div>
+						)}
+
+						{/* 하루종일 체크박스 */}
+						<div className="flex items-center gap-2">
+							<input
+								type="checkbox"
+								id="allDayBreak"
+								checked={isAllDayBreak}
+								onChange={e => {
+									setIsAllDayBreak(e.target.checked);
+									if (e.target.checked) {
+										setBreakStart("00:00");
+										setBreakEnd("23:59");
+									}
+								}}
+								className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+							/>
+							<label htmlFor="allDayBreak" className="text-sm font-medium text-gray-700 cursor-pointer">
+								하루종일
+							</label>
+						</div>
+
+						{/* 시간 입력 */}
+						<div className="grid gap-4 sm:grid-cols-[auto_minmax(140px,auto)_auto_minmax(140px,auto)_auto] items-end">
+							<div className="text-sm font-semibold text-gray-700">시간</div>
+							<input 
+								className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed" 
+								type="time" 
+								value={breakStart} 
+								onChange={e => setBreakStart(e.target.value)}
+								disabled={isAllDayBreak}
+							/>
+							<span className="px-2 text-sm font-medium text-gray-600">~</span>
+							<input 
+								className="w-full min-w-[140px] rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed" 
+								type="time" 
+								value={breakEnd} 
+								onChange={e => setBreakEnd(e.target.value)}
+								disabled={isAllDayBreak}
+							/>
+							<button
+								className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+								onClick={async () => {
+									const actualStart = isAllDayBreak ? "00:00" : breakStart;
+									const actualEnd = isAllDayBreak ? "23:59" : breakEnd;
+									
+									let res;
+									if (isRecurringBreak) {
+										// 반복 브레이크 추가
+										res = await fetch("/api/admin/recurring-breaks", {
+											method: "POST",
+											headers: { "Content-Type": "application/json" },
+											body: JSON.stringify({ designerId, weekday: breakWeekday, start: actualStart, end: actualEnd }),
+										});
+									} else {
+										// 매일 브레이크 추가
+										res = await fetch("/api/admin/breaks", {
+											method: "POST",
+											headers: { "Content-Type": "application/json" },
+											body: JSON.stringify({ designerId, start: actualStart, end: actualEnd }),
+										});
+									}
+									
+									if (res.ok) {
+										loadDesignerBreaks();
+										setBreakStart("13:00");
+										setBreakEnd("14:00");
+										setIsAllDayBreak(false);
+										setIsRecurringBreak(false);
+										setBreakWeekday(1);
+									} else {
+										alert("등록 실패");
+									}
+								}}
+							>
+								추가
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
@@ -360,11 +502,45 @@ export default function AdminPage() {
 									<div className="text-sm text-gray-500 py-3 px-4 rounded-xl bg-gray-50 border border-gray-200">설정된 기본 차단시간이 없습니다.</div>
 								) : (
 									<div className="space-y-2">
-										{designerBreaks.defaultBlocks.map((db, idx) => (
-											<div key={idx} className="rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 text-sm font-medium text-gray-800">
-												{db.date} {db.start} ~ {db.end} {db.reason ? `(${db.reason})` : ""}
-											</div>
-										))}
+										{designerBreaks.defaultBlocks.map((db, idx) => {
+											// 해당 날짜와 시간에 맞는 Block ID 찾기
+											const blockDate = new Date(`${db.date}T${db.start}:00`);
+											const blockEndDate = new Date(`${db.date}T${db.end}:00`);
+											const matchingBlock = list.find(
+												item => item.kind === "block" && 
+												new Date(item.startISO).getTime() === blockDate.getTime() &&
+												new Date(item.endISO).getTime() === blockEndDate.getTime()
+											);
+											
+											return (
+												<div key={idx} className="flex items-center justify-between rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 hover:shadow-md transition-all">
+													<span className="text-sm font-medium text-gray-800">
+														{db.date} {db.start} ~ {db.end} {db.reason ? `(${db.reason})` : ""}
+													</span>
+													{matchingBlock?.id && (
+														<button
+															className="ml-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105"
+															onClick={async () => {
+																if (!confirm("기본 차단시간을 삭제하시겠습니까?")) return;
+																const res = await fetch("/api/admin/blocks", {
+																	method: "DELETE",
+																	headers: { "Content-Type": "application/json" },
+																	body: JSON.stringify({ blockId: matchingBlock.id }),
+																});
+																if (res.ok) {
+																	loadDesignerBreaks();
+																	loadDayData();
+																} else {
+																	alert("삭제 중 오류가 발생했습니다.");
+																}
+															}}
+														>
+															삭제
+														</button>
+													)}
+												</div>
+											);
+										})}
 									</div>
 								)}
 							</div>
@@ -375,51 +551,6 @@ export default function AdminPage() {
 				</div>
 			)}
 
-			{tab === "dashboard" && (
-				<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">
-					<div className="flex items-center gap-3 mb-4">
-						<div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-							<svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-							</svg>
-						</div>
-						<div className="text-lg font-semibold text-gray-800">반복 브레이크 추가</div>
-					</div>
-					<div className="grid gap-4 sm:grid-cols-[auto_auto_auto_auto_auto] items-end">
-						<select className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" value={rbWeekday} onChange={e => setRbWeekday(Number(e.target.value))}>
-							<option value={0}>일</option>
-							<option value={1}>월</option>
-							<option value={2}>화</option>
-							<option value={3}>수</option>
-							<option value={4}>목</option>
-							<option value={5}>금</option>
-							<option value={6}>토</option>
-						</select>
-						<input className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={rbStart} onChange={e => setRbStart(e.target.value)} />
-						<span className="px-2 text-sm font-medium text-gray-600">~</span>
-						<input className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" type="time" value={rbEnd} onChange={e => setRbEnd(e.target.value)} />
-						<button
-							className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
-							onClick={async () => {
-								const res = await fetch("/api/admin/recurring-breaks", {
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({ designerId, weekday: rbWeekday, start: rbStart, end: rbEnd }),
-								});
-								if (res.ok) {
-									loadDesignerBreaks();
-									setRbStart("12:00");
-									setRbEnd("12:30");
-								} else {
-									alert("등록 실패");
-								}
-							}}
-						>
-							추가
-						</button>
-					</div>
-				</div>
-			)}
 
 			{tab === "bookings" && (
 				<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">

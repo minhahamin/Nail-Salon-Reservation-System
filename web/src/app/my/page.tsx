@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { formatTimeRange } from "@/lib/format";
+import { formatTimeRange, formatPhoneNumber } from "@/lib/format";
 import { Booking } from "@/lib/types";
 
 export default function MyPage() {
@@ -120,11 +120,13 @@ export default function MyPage() {
 							<div>
 								<label className="mb-2 block text-sm font-semibold text-gray-700">연락처</label>
 								<input
+									type="tel"
 									className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
-									placeholder="01012345678"
+									placeholder="010-0000-0000"
 									value={phone}
-									onChange={e => setPhone(e.target.value)}
+									onChange={e => setPhone(formatPhoneNumber(e.target.value))}
 									onKeyDown={e => e.key === "Enter" && phone && !loading && fetchByPhone()}
+									maxLength={13}
 								/>
 							</div>
 						) : (
@@ -142,11 +144,13 @@ export default function MyPage() {
 										연락처 <span className="text-xs font-normal text-gray-500">(선택사항)</span>
 									</label>
 									<input
+										type="tel"
 										className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
-										placeholder="01012345678 (선택사항)"
+										placeholder="010-0000-0000 (선택사항)"
 										value={phone}
-										onChange={e => setPhone(e.target.value)}
+										onChange={e => setPhone(formatPhoneNumber(e.target.value))}
 										onKeyDown={e => e.key === "Enter" && bookingId && !loading && fetchById()}
+										maxLength={13}
 									/>
 								</div>
 							</div>

@@ -5,7 +5,7 @@ import SlotRecommendations from "@/components/SlotRecommendations";
 import { services } from "@/lib/data";
 import { sumDurationMinutes } from "@/lib/slots";
 import { AvailabilityResponse, Booking } from "@/lib/types";
-import { formatPriceKRW, formatTimeRange } from "@/lib/format";
+import { formatPriceKRW, formatTimeRange, formatPhoneNumber } from "@/lib/format";
 import { useState } from "react";
 import Calendar from "@/components/Calendar";
 import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "@/lib/config";
@@ -240,10 +240,12 @@ export default function BookingPage() {
 							<div>
 								<label className="mb-2 block text-sm font-semibold text-gray-700">연락처</label>
 								<input
+									type="tel"
 									className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
 									value={customerPhone}
-									onChange={e => setCustomerPhone(e.target.value)}
+									onChange={e => setCustomerPhone(formatPhoneNumber(e.target.value))}
 									placeholder="010-0000-0000"
+									maxLength={13}
 								/>
 							</div>
 						</div>
