@@ -7,7 +7,7 @@ import Calendar from "@/components/Calendar";
 import { Designer, Booking, Block } from "@/lib/types";
 
 export default function AdminPage() {
-	const [designerId, setDesignerId] = useState<string>(designers[0]?.id);
+	const [designerId, setDesignerId] = useState<string>("");
 	const [dateISO, setDateISO] = useState<string>(new Date().toISOString());
 	const [start, setStart] = useState<string>("12:00");
 	const [end, setEnd] = useState<string>("13:00");
@@ -121,9 +121,13 @@ export default function AdminPage() {
 		if (res.ok) {
 			const data = await res.json();
 			setDesignersList(data);
-			// 디자이너 목록이 업데이트되면 첫 번째 디자이너 선택
-			if (data.length > 0 && !designerId) {
-				setDesignerId(data[0].id);
+			// 디자이너 목록이 업데이트되면 첫 번째 디자이너 선택 (항상 업데이트)
+			if (data.length > 0) {
+				// 현재 선택된 디자이너가 목록에 없으면 첫 번째 디자이너 선택
+				const currentDesignerExists = data.some((d: Designer) => d.id === designerId);
+				if (!currentDesignerExists || !designerId) {
+					setDesignerId(data[0].id);
+				}
 			}
 		}
 	};
@@ -253,14 +257,21 @@ export default function AdminPage() {
 						<select 
 							className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none" 
 							value={designerId} 
-							onChange={e => setDesignerId(e.target.value)}
+							onChange={e => {
+								console.log("디자이너 변경:", e.target.value);
+								setDesignerId(e.target.value);
+							}}
 						>
-					{designersList.map(d => (
-						<option key={d.id} value={d.id}>
-							{d.name}
-						</option>
-					))}
-				</select>
+							{designersList.length === 0 ? (
+								<option value="">디자이너를 불러오는 중...</option>
+							) : (
+								designersList.map(d => (
+									<option key={d.id} value={d.id}>
+										{d.name}
+									</option>
+								))
+							)}
+						</select>
 					</div>
 					<div className="sm:col-span-2 rounded-2xl bg-white/80 backdrop-blur-sm p-4 shadow-lg border border-pink-100">
 						<label className="block text-sm font-semibold text-gray-700 mb-2">예약 날짜</label>
@@ -446,6 +457,10 @@ export default function AdminPage() {
 									if (e.target.checked) {
 										setBreakStart("00:00");
 										setBreakEnd("23:59");
+									} else {
+										// 체크 해제 시 기본값으로 리셋
+										setBreakStart("13:00");
+										setBreakEnd("14:00");
 									}
 								}}
 								className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
@@ -474,10 +489,18 @@ export default function AdminPage() {
 								disabled={isAllDayBreak}
 							/>
 							<button
-								className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+								className="rounded-xl bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+								disabled={!designerId}
 								onClick={async () => {
+									if (!designerId) {
+										alert("디자이너를 선택해주세요.");
+										return;
+									}
+									
 									const actualStart = isAllDayBreak ? "00:00" : breakStart;
 									const actualEnd = isAllDayBreak ? "23:59" : breakEnd;
+									
+									console.log("브레이크 추가:", { designerId, weekday: breakWeekday, start: actualStart, end: actualEnd, isRecurringBreak });
 									
 									let res;
 									if (isRecurringBreak) {
@@ -498,13 +521,15 @@ export default function AdminPage() {
 									
 									if (res.ok) {
 										loadDesignerBreaks();
+										// 폼 리셋
 										setBreakStart("13:00");
 										setBreakEnd("14:00");
 										setIsAllDayBreak(false);
 										setIsRecurringBreak(false);
-										setBreakWeekday(1);
+										setBreakWeekday(0); // 일요일로 초기화
 									} else {
-										alert("등록 실패");
+										const errorData = await res.json().catch(() => ({ message: "등록 실패" }));
+										alert(errorData.message || "등록 실패");
 									}
 								}}
 							>
