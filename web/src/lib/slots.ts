@@ -1,4 +1,4 @@
-import { AvailabilityRequest, AvailabilityResponse, Slot } from "./types";
+import { AvailabilityRequest, AvailabilityResponse, Slot, Designer, Booking, Block } from "./types";
 import { designers, existingBookings, manualBlocks } from "./data";
 import { addMinutes, formatLocalISO, isSameDay, setTime } from "./time";
 import { BUFFER_MINUTES, MIN_LEAD_HOURS, MAX_LEAD_DAYS } from "./config";
@@ -19,7 +19,12 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
  * - 점심/휴식시간과 겹치지 않는 시간만 추천
  * - 디자이너의 일일 최대 예약 건수/시간 한도 내에서만 추천
  */
-export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
+export function recommendSlots(
+	req: AvailabilityRequest,
+	designerOverride?: Designer,
+	bookingsOverride?: Booking[],
+	blocksOverride?: Block[]
+): AvailabilityResponse {
 	const {
 		dateISO,
 		designerId,
@@ -31,7 +36,7 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 	} = req;
 	const date = new Date(dateISO);
 	const now = new Date();
-	const designer = designers.find(d => d.id === designerId);
+	const designer = designerOverride || designers.find(d => d.id === designerId);
 	if (!designer) {
 		return { dateISO, designerId, totalDurationMinutes, slots: [] };
 	}
@@ -58,7 +63,8 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 	}
 
 	// 디자이너의 해당 날짜 예약/차단
-	const bookings = existingBookings
+	const bookingsToUse = bookingsOverride || existingBookings;
+	const bookings = bookingsToUse
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date))
 		// 예약 끝에 버퍼를 더해 충돌 검사
@@ -66,7 +72,8 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 		.sort((a, b) => a.start.getTime() - b.start.getTime());
 	
 	// 수동 차단시간 (관리자가 설정한 차단)
-	const manualBlocksForDate = manualBlocks
+	const blocksToUse = blocksOverride || manualBlocks;
+	const manualBlocksForDate = blocksToUse
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date))
 		.map(b => ({ start: new Date(b.startISO), end: new Date(b.endISO) }));
@@ -144,7 +151,7 @@ export function recommendSlots(req: AvailabilityRequest): AvailabilityResponse {
 	}
 
 	// 1일 최대 처리 건수/시간 한도 적용
-	const dayBookings = existingBookings
+	const dayBookings = bookingsToUse
 		.filter(b => b.designerId === designerId)
 		.filter(b => isSameDay(new Date(b.startISO), date));
 	if (designer.dailyMaxAppointments && dayBookings.length >= designer.dailyMaxAppointments) {
