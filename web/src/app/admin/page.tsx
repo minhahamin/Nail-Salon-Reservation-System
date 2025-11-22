@@ -4,6 +4,7 @@ import { setTime, formatLocalISO } from "@/lib/time";
 import { useEffect, useMemo, useState } from "react";
 import { formatTimeRange } from "@/lib/format";
 import Calendar from "@/components/Calendar";
+import { Designer, Booking, Block } from "@/lib/types";
 
 export default function AdminPage() {
 	const [designerId, setDesignerId] = useState<string>(designers[0]?.id);
@@ -12,8 +13,8 @@ export default function AdminPage() {
 	const [end, setEnd] = useState<string>("13:00");
 	const [reason, setReason] = useState<string>("");
 	const [tab, setTab] = useState<"dashboard" | "bookings" | "designers">("dashboard");
-	const [designersList, setDesignersList] = useState<any[]>([]);
-	const [editingDesigner, setEditingDesigner] = useState<any | null>(null);
+	const [designersList, setDesignersList] = useState<Designer[]>([]);
+	const [editingDesigner, setEditingDesigner] = useState<Designer | null>(null);
 	const [showDesignerForm, setShowDesignerForm] = useState<boolean>(false);
 	const [designerForm, setDesignerForm] = useState({
 		name: "",
@@ -25,7 +26,7 @@ export default function AdminPage() {
 	});
 	const [uploadingImage, setUploadingImage] = useState(false);
 	const [searchPhone, setSearchPhone] = useState<string>("");
-	const [bookingList, setBookingList] = useState<any[]>([]);
+	const [bookingList, setBookingList] = useState<Booking[]>([]);
 	const [adminMsg, setAdminMsg] = useState<string>("");
 	const [breakStart, setBreakStart] = useState<string>("13:00");
 	const [breakEnd, setBreakEnd] = useState<string>("14:00");
@@ -57,18 +58,21 @@ export default function AdminPage() {
 			if (!designerId) return;
 			const res = await fetch(`/api/admin/day?designerId=${encodeURIComponent(designerId)}&date=${dateISO.slice(0, 10)}`);
 			if (res.ok) {
-				const data = await res.json();
+				const data = await res.json() as { 
+					bookings: Array<Pick<Booking, 'id' | 'startISO' | 'endISO'>>; 
+					blocks: Array<Pick<Block, 'id' | 'startISO' | 'endISO' | 'reason'>>;
+				};
 				const items = [
-					...data.bookings.map((b: any) => ({
+					...data.bookings.map((b) => ({
 						kind: "booking" as const,
-					id: b.id,
+						id: b.id,
 						startISO: b.startISO,
 						endISO: b.endISO,
 						label: `예약 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}`,
 					})),
-					...data.blocks.map((b: any) => ({
+					...data.blocks.map((b) => ({
 						kind: "block" as const,
-					id: b.id,
+						id: b.id,
 						startISO: b.startISO,
 						endISO: b.endISO,
 						label: `차단 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}`,
@@ -772,6 +776,7 @@ export default function AdminPage() {
 									setShowDesignerForm(true);
 									setDesignerForm({
 										name: "",
+										imageUrl: "",
 										specialties: [],
 										workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
 										dailyMaxAppointments: 8,
