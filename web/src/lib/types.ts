@@ -1,6 +1,7 @@
 export type Designer = {
 	id: string;
 	name: string;
+	imageUrl?: string; // 디자이너 프로필 이미지 URL
 	specialties: string[];
 	workHours: {
 		weekday: number[]; // 0-6 (Sun-Sat)

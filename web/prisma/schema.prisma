@@ -32,3 +32,20 @@ model Block {
   reason     String?
   createdAt  DateTime @default(now())
 }
+
+model Designer {
+  id                   String   @id @default(cuid())
+  name                 String
+  imageUrl             String?  // 디자이너 프로필 이미지 URL
+  specialties          String   // JSON stringified array
+  workHours            String   // JSON stringified { weekday: number[], start: string, end: string }
+  holidays             String?  // JSON stringified array
+  breaks               String?  // JSON stringified array
+  recurringBreaks      String?  // JSON stringified array
+  defaultBlocks        String?  // JSON stringified array
+  specialHours         String?  // JSON stringified object
+  dailyMaxAppointments Int?
+  dailyMaxMinutes      Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}

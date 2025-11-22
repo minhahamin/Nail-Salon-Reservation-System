@@ -11,7 +11,19 @@ export default function AdminPage() {
 	const [start, setStart] = useState<string>("12:00");
 	const [end, setEnd] = useState<string>("13:00");
 	const [reason, setReason] = useState<string>("");
-	const [tab, setTab] = useState<"dashboard" | "bookings">("dashboard");
+	const [tab, setTab] = useState<"dashboard" | "bookings" | "designers">("dashboard");
+	const [designersList, setDesignersList] = useState<any[]>([]);
+	const [editingDesigner, setEditingDesigner] = useState<any | null>(null);
+	const [showDesignerForm, setShowDesignerForm] = useState<boolean>(false);
+	const [designerForm, setDesignerForm] = useState({
+		name: "",
+		imageUrl: "",
+		specialties: [] as string[],
+		workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
+		dailyMaxAppointments: 8,
+		dailyMaxMinutes: 480,
+	});
+	const [uploadingImage, setUploadingImage] = useState(false);
 	const [searchPhone, setSearchPhone] = useState<string>("");
 	const [bookingList, setBookingList] = useState<any[]>([]);
 	const [adminMsg, setAdminMsg] = useState<string>("");
@@ -100,6 +112,86 @@ export default function AdminPage() {
 		location.href = "/admin/login";
 	};
 
+	const loadDesigners = async () => {
+		const res = await fetch("/api/admin/designers");
+		if (res.ok) {
+			const data = await res.json();
+			setDesignersList(data);
+			// 디자이너 목록이 업데이트되면 첫 번째 디자이너 선택
+			if (data.length > 0 && !designerId) {
+				setDesignerId(data[0].id);
+			}
+		}
+	};
+
+	const handleCreateDesigner = async () => {
+		const res = await fetch("/api/admin/designers", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(designerForm),
+		});
+		if (res.ok) {
+			await loadDesigners();
+			setShowDesignerForm(false);
+			setDesignerForm({
+				name: "",
+				imageUrl: "",
+				specialties: [],
+				workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
+				dailyMaxAppointments: 8,
+				dailyMaxMinutes: 480,
+			});
+		} else {
+			alert("디자이너 추가 실패");
+		}
+	};
+
+	const handleUpdateDesigner = async () => {
+		if (!editingDesigner) return;
+		const res = await fetch("/api/admin/designers", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ...designerForm, id: editingDesigner.id }),
+		});
+		if (res.ok) {
+			await loadDesigners();
+			setEditingDesigner(null);
+			setShowDesignerForm(false);
+			setDesignerForm({
+				name: "",
+				imageUrl: "",
+				specialties: [],
+				workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
+				dailyMaxAppointments: 8,
+				dailyMaxMinutes: 480,
+			});
+		} else {
+			alert("디자이너 수정 실패");
+		}
+	};
+
+	const handleDeleteDesigner = async (id: string) => {
+		if (!confirm("정말로 이 디자이너를 삭제하시겠습니까?")) return;
+		const res = await fetch("/api/admin/designers", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ id }),
+		});
+		if (res.ok) {
+			await loadDesigners();
+			if (designerId === id) {
+				setDesignerId(designersList.find(d => d.id !== id)?.id || "");
+			}
+		} else {
+			const data = await res.json();
+			alert(data.message || "디자이너 삭제 실패");
+		}
+	};
+
+	useEffect(() => {
+		loadDesigners();
+	}, []);
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
 			<div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-8">
@@ -139,6 +231,16 @@ export default function AdminPage() {
 					>
 						예약 관리
 				</button>
+					<button 
+						onClick={() => setTab("designers")} 
+						className={`rounded-xl px-5 py-3 text-sm font-semibold transition-all ${
+							tab === "designers" 
+								? "bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg" 
+								: "bg-white/80 text-gray-700 hover:bg-white border border-gray-200"
+						}`}
+					>
+						디자이너 관리
+				</button>
 			</div>
 				
 				<div className="grid gap-6 sm:grid-cols-3">
@@ -149,7 +251,7 @@ export default function AdminPage() {
 							value={designerId} 
 							onChange={e => setDesignerId(e.target.value)}
 						>
-					{designers.map(d => (
+					{designersList.map(d => (
 						<option key={d.id} value={d.id}>
 							{d.name}
 						</option>
@@ -632,6 +734,328 @@ export default function AdminPage() {
 							</div>
 						))}
 					</div>
+				</div>
+			)}
+
+			{tab === "designers" && (
+				<div className="space-y-6">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+								<svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+								</svg>
+							</div>
+							<div className="text-lg font-semibold text-gray-800">디자이너 관리</div>
+						</div>
+						<div className="flex gap-2">
+							{designersList.length === 0 && (
+								<button
+									onClick={async () => {
+										const res = await fetch("/api/admin/designers/init", { method: "POST" });
+										if (res.ok) {
+											await loadDesigners();
+											alert("초기 디자이너 데이터가 로드되었습니다.");
+										} else {
+											const data = await res.json();
+											alert(data.message || "초기 데이터 로드 실패");
+										}
+									}}
+									className="rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+								>
+									초기 데이터 로드
+								</button>
+							)}
+							<button
+								onClick={() => {
+									setEditingDesigner(null);
+									setShowDesignerForm(true);
+									setDesignerForm({
+										name: "",
+										specialties: [],
+										workHours: { weekday: [1, 2, 3, 4, 5], start: "10:00", end: "19:00" },
+										dailyMaxAppointments: 8,
+										dailyMaxMinutes: 480,
+									});
+								}}
+								className="rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+							>
+								+ 디자이너 추가
+							</button>
+						</div>
+					</div>
+
+					{/* 디자이너 목록 */}
+					<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">
+						{designersList.length === 0 ? (
+							<div className="text-center py-8 text-gray-500">등록된 디자이너가 없습니다.</div>
+						) : (
+							<div className="space-y-3">
+								{designersList.map(designer => (
+									<div key={designer.id} className="flex items-center justify-between rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 hover:border-pink-300 hover:shadow-md transition-all">
+										<div className="flex items-center gap-4 flex-1">
+											{designer.imageUrl ? (
+												<img
+													src={designer.imageUrl}
+													alt={designer.name}
+													className="h-16 w-16 rounded-full object-cover border-2 border-gray-300"
+													onError={(e) => {
+														const target = e.target as HTMLImageElement;
+														target.style.display = 'none';
+													}}
+												/>
+											) : (
+												<div className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-xl font-bold text-white">
+													{designer.name.charAt(0)}
+												</div>
+											)}
+											<div>
+												<div className="font-semibold text-gray-800">{designer.name}</div>
+												<div className="text-xs text-gray-500 mt-1">
+													전문분야: {designer.specialties.join(", ")} · 
+													근무시간: {designer.workHours.start} ~ {designer.workHours.end} · 
+													근무요일: {designer.workHours.weekday.map((w: number) => weekdayNames[w]).join(", ")}
+												</div>
+											</div>
+										</div>
+										<div className="flex gap-2">
+											<button
+												onClick={() => {
+													setEditingDesigner(designer);
+													setDesignerForm({
+														name: designer.name,
+														imageUrl: designer.imageUrl || "",
+														specialties: designer.specialties,
+														workHours: designer.workHours,
+														dailyMaxAppointments: designer.dailyMaxAppointments || 8,
+														dailyMaxMinutes: designer.dailyMaxMinutes || 480,
+													});
+													setShowDesignerForm(true);
+												}}
+												className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105"
+											>
+												수정
+											</button>
+											<button
+												onClick={() => handleDeleteDesigner(designer.id)}
+												className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105"
+											>
+												삭제
+											</button>
+										</div>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+
+					{/* 디자이너 추가/수정 폼 */}
+					{showDesignerForm && (
+						<div className="rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg border border-pink-100">
+							<div className="flex items-center justify-between mb-4">
+								<div className="text-lg font-semibold text-gray-800">
+									{editingDesigner ? "디자이너 수정" : "디자이너 추가"}
+								</div>
+								<button
+									onClick={() => {
+										setShowDesignerForm(false);
+										setEditingDesigner(null);
+									}}
+									className="text-gray-500 hover:text-gray-700"
+								>
+									✕
+								</button>
+							</div>
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-2">이름</label>
+									<input
+										className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+										value={designerForm.name}
+										onChange={e => setDesignerForm({ ...designerForm, name: e.target.value })}
+										placeholder="디자이너 이름"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-2">프로필 이미지</label>
+									<div className="space-y-3">
+										<input
+											type="file"
+											accept="image/*"
+											className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+											onChange={async (e) => {
+												const file = e.target.files?.[0];
+												if (!file) return;
+
+												setUploadingImage(true);
+												try {
+													const formData = new FormData();
+													formData.append("file", file);
+
+													const res = await fetch("/api/admin/upload", {
+														method: "POST",
+														body: formData,
+													});
+
+													if (res.ok) {
+														const data = await res.json();
+														setDesignerForm({ ...designerForm, imageUrl: data.imageUrl });
+													} else {
+														const error = await res.json();
+														alert(error.message || "이미지 업로드 실패");
+													}
+												} catch (error) {
+													console.error("Upload error:", error);
+													alert("이미지 업로드 중 오류가 발생했습니다.");
+												} finally {
+													setUploadingImage(false);
+												}
+											}}
+											disabled={uploadingImage}
+										/>
+										{uploadingImage && (
+											<div className="text-sm text-gray-500">이미지 업로드 중...</div>
+										)}
+										{designerForm.imageUrl && (
+											<div className="mt-2 flex items-center gap-4">
+												<img
+													src={designerForm.imageUrl}
+													alt="프로필 미리보기"
+													className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
+													onError={(e) => {
+														(e.target as HTMLImageElement).style.display = 'none';
+													}}
+												/>
+												<button
+													type="button"
+													onClick={() => setDesignerForm({ ...designerForm, imageUrl: "" })}
+													className="text-sm text-red-600 hover:text-red-700 font-medium"
+												>
+													이미지 제거
+												</button>
+											</div>
+										)}
+									</div>
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-2">전문분야</label>
+									<div className="flex flex-wrap gap-2">
+										{["basic", "art", "care", "removal"].map(spec => (
+											<label key={spec} className="flex items-center gap-2 cursor-pointer">
+												<input
+													type="checkbox"
+													checked={designerForm.specialties.includes(spec)}
+													onChange={e => {
+														if (e.target.checked) {
+															setDesignerForm({ ...designerForm, specialties: [...designerForm.specialties, spec] });
+														} else {
+															setDesignerForm({ ...designerForm, specialties: designerForm.specialties.filter(s => s !== spec) });
+														}
+													}}
+													className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+												/>
+												<span className="text-sm text-gray-700">
+													{spec === "basic" ? "베이직" : spec === "art" ? "아트" : spec === "care" ? "케어" : "제거"}
+												</span>
+											</label>
+										))}
+									</div>
+								</div>
+								<div className="grid gap-4 sm:grid-cols-2">
+									<div>
+										<label className="block text-sm font-semibold text-gray-700 mb-2">근무 시작 시간</label>
+										<input
+											type="time"
+											className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+											value={designerForm.workHours.start}
+											onChange={e => setDesignerForm({ ...designerForm, workHours: { ...designerForm.workHours, start: e.target.value } })}
+										/>
+									</div>
+									<div>
+										<label className="block text-sm font-semibold text-gray-700 mb-2">근무 종료 시간</label>
+										<input
+											type="time"
+											className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+											value={designerForm.workHours.end}
+											onChange={e => setDesignerForm({ ...designerForm, workHours: { ...designerForm.workHours, end: e.target.value } })}
+										/>
+									</div>
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-2">근무 요일</label>
+									<div className="flex flex-wrap gap-2">
+										{weekdayNames.map((day, idx) => (
+											<label key={idx} className="flex items-center gap-2 cursor-pointer">
+												<input
+													type="checkbox"
+													checked={designerForm.workHours.weekday.includes(idx)}
+													onChange={e => {
+														const currentWeekdays = designerForm.workHours.weekday;
+														if (e.target.checked) {
+															setDesignerForm({
+																...designerForm,
+																workHours: {
+																	...designerForm.workHours,
+																	weekday: [...currentWeekdays, idx]
+																}
+															});
+														} else {
+															setDesignerForm({
+																...designerForm,
+																workHours: {
+																	...designerForm.workHours,
+																	weekday: currentWeekdays.filter(w => w !== idx)
+																}
+															});
+														}
+													}}
+													className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+												/>
+												<span className="text-sm text-gray-700">{day}</span>
+											</label>
+										))}
+									</div>
+								</div>
+								<div className="grid gap-4 sm:grid-cols-2">
+									<div>
+										<label className="block text-sm font-semibold text-gray-700 mb-2">일일 최대 예약 건수</label>
+										<input
+											type="number"
+											className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+											value={designerForm.dailyMaxAppointments}
+											onChange={e => setDesignerForm({ ...designerForm, dailyMaxAppointments: Number(e.target.value) })}
+										/>
+									</div>
+									<div>
+										<label className="block text-sm font-semibold text-gray-700 mb-2">일일 최대 근무 시간 (분)</label>
+										<input
+											type="number"
+											className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
+											value={designerForm.dailyMaxMinutes}
+											onChange={e => setDesignerForm({ ...designerForm, dailyMaxMinutes: Number(e.target.value) })}
+										/>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<button
+										onClick={editingDesigner ? handleUpdateDesigner : handleCreateDesigner}
+										className="flex-1 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
+									>
+										{editingDesigner ? "수정" : "추가"}
+									</button>
+									<button
+										onClick={() => {
+											setShowDesignerForm(false);
+											setEditingDesigner(null);
+										}}
+										className="rounded-xl border-2 border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+									>
+										취소
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 			</div>
