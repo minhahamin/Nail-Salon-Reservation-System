@@ -1,7 +1,7 @@
 'use client';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatTimeRange, formatPhoneNumber } from "@/lib/format";
-import { Booking } from "@/lib/types";
+import { Booking, Designer } from "@/lib/types";
 
 export default function MyPage() {
 	const [searchType, setSearchType] = useState<"phone" | "bookingId">("phone");
@@ -11,12 +11,42 @@ export default function MyPage() {
 	const [detail, setDetail] = useState<Booking | undefined>();
 	const [message, setMessage] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [designers, setDesigners] = useState<Designer[]>([]);
+
+	// 디자이너 목록 로드
+	useEffect(() => {
+		const loadDesigners = async () => {
+			try {
+				const res = await fetch("/api/admin/designers");
+				if (res.ok) {
+					const data = await res.json();
+					setDesigners(data);
+				}
+			} catch (error) {
+				console.error("Error loading designers:", error);
+			}
+		};
+		loadDesigners();
+	}, []);
+
+	// 디자이너 ID로 이름 찾기
+	const getDesignerName = (designerId: string): string => {
+		const designer = designers.find(d => d.id === designerId);
+		return designer?.name || designerId;
+	};
 
 	const fetchByPhone = async () => {
 		setMessage("");
 		setDetail(undefined);
 		setLoading(true);
-		const res = await fetch(`/api/bookings?phone=${encodeURIComponent(phone)}`);
+		// 하이픈 제거하여 숫자만 전송 (DB에 저장된 형식과 일치)
+		const phoneNumbersOnly = phone.replace(/\D/g, "");
+		if (!phoneNumbersOnly || phoneNumbersOnly.length < 7) {
+			setMessage("올바른 전화번호를 입력해주세요.");
+			setLoading(false);
+			return;
+		}
+		const res = await fetch(`/api/bookings?phone=${encodeURIComponent(phoneNumbersOnly)}`);
 		if (res.ok) {
 			const data: Booking[] = await res.json();
 			setList(data);
@@ -30,10 +60,12 @@ export default function MyPage() {
 	const fetchById = async () => {
 		setMessage("");
 		setLoading(true);
+		// 하이픈 제거하여 숫자만 전송 (DB에 저장된 형식과 일치)
+		const phoneNumbersOnly = phone ? phone.replace(/\D/g, "") : undefined;
 		const res = await fetch("/api/bookings", {
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ bookingId, customerPhone: phone || undefined }),
+			body: JSON.stringify({ bookingId, customerPhone: phoneNumbersOnly }),
 		});
 		if (res.ok) {
 			const data: Booking = await res.json();
@@ -46,16 +78,30 @@ export default function MyPage() {
 	};
 
 	const cancel = async (b: Booking) => {
+		// 확인 알림창
+		const startDate = new Date(b.startISO);
+		const dateStr = startDate.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+		const timeStr = formatTimeRange(b.startISO, b.endISO);
+		const designerName = getDesignerName(b.designerId);
+		
+		if (!confirm(`정말 예약 취소하시겠습니까?\n\n날짜: ${dateStr}\n시간: ${timeStr}\n디자이너: ${designerName}`)) {
+			return;
+		}
+		
 		const res = await fetch("/api/bookings", {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ bookingId: b.id, customerPhone: b.customerPhone }),
 		});
 		if (res.ok) {
+			// 완료 알림창
+			alert("예약 취소 완료 되었습니다 !");
 			setMessage("예약이 취소되었습니다.");
 			await fetchByPhone();
 			if (detail?.id === b.id) setDetail(undefined);
 		} else {
+			const errorData = await res.json().catch(() => ({ message: "알 수 없는 오류" }));
+			alert(`취소 중 오류가 발생했습니다: ${errorData.message || "알 수 없는 오류"}`);
 			setMessage("취소 중 오류가 발생했습니다.");
 		}
 	};
@@ -196,7 +242,7 @@ export default function MyPage() {
 								})()}
 							</div>
 						</div>
-						<div className="text-xs text-gray-600 mb-4">ID: {detail.id} · 디자이너: {detail.designerId}</div>
+						<div className="text-xs text-gray-600 mb-4">ID: {detail.id} · 디자이너: {getDesignerName(detail.designerId)}</div>
 						{(() => {
 							const now = new Date();
 							const isPast = new Date(detail.endISO) < now;
@@ -246,7 +292,7 @@ export default function MyPage() {
 								<div key={b.id} className="flex items-center justify-between rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 hover:border-pink-300 hover:shadow-md transition-all">
 								<div>
 										<div className="font-semibold text-gray-800">{dateStr} {formatTimeRange(b.startISO, b.endISO)}</div>
-										<div className="text-xs text-gray-500 mt-1">ID: {b.id} · 디자이너: {b.designerId}</div>
+										<div className="text-xs text-gray-500 mt-1">ID: {b.id} · 디자이너: {getDesignerName(b.designerId)}</div>
 								</div>
 								<div className="flex gap-2">
 										<a 

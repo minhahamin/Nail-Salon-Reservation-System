@@ -125,6 +125,9 @@ export async function POST(req: NextRequest) {
 				reason: selectedSlot.reason || "unavailable"
 			}, { status: 409 });
 		}
+		// 전화번호에서 하이픈 제거하여 숫자만 저장 (조회 시와 일관성 유지)
+		const phoneNumbersOnly = (customerPhone ?? "").replace(/\D/g, "");
+		
 		const newBooking: Booking = {
 			id: `bk-${Date.now()}`,
 			designerId,
@@ -132,7 +135,7 @@ export async function POST(req: NextRequest) {
 			endISO,
 			serviceIds,
 			customerName: customerName ?? "",
-			customerPhone: customerPhone ?? "",
+			customerPhone: phoneNumbersOnly, // 하이픈 제거된 번호 저장
 			agreedTerms: Boolean(agreedTerms),
 			agreedPrivacy: Boolean(agreedPrivacy),
 			reminderOptIn: Boolean(reminderOptIn),
@@ -146,7 +149,7 @@ export async function POST(req: NextRequest) {
 				endISO: newBooking.endISO,
 				serviceIds: JSON.stringify(newBooking.serviceIds),
 				customerName: newBooking.customerName,
-				customerPhone: newBooking.customerPhone,
+				customerPhone: newBooking.customerPhone, // 하이픈 제거된 번호 저장
 				agreedTerms: Boolean(newBooking.agreedTerms),
 				agreedPrivacy: Boolean(newBooking.agreedPrivacy),
 				reminderOptIn: Boolean(newBooking.reminderOptIn),
@@ -154,9 +157,14 @@ export async function POST(req: NextRequest) {
 		});
 		// 슬롯 계산은 메모리 배열도 참고하므로 동기화
 		existingBookings.push(newBooking);
+		console.log("[POST /api/bookings] Booking created:", created.id);
 		return NextResponse.json(newBooking, { status: 201 });
-	} catch {
-		return NextResponse.json({ message: "Server error" }, { status: 500 });
+	} catch (error) {
+		console.error("[POST /api/bookings] Error creating booking:", error);
+		return NextResponse.json({ 
+			message: "Server error",
+			error: error instanceof Error ? error.message : String(error)
+		}, { status: 500 });
 	}
 }
 
@@ -165,13 +173,36 @@ export async function GET(req: NextRequest) {
 	try {
 		const phone = req.nextUrl.searchParams.get("phone") ?? "";
 		const designerIdFilter = req.nextUrl.searchParams.get("designerId") ?? "";
-		if (!phone || phone.length < 7) {
+		
+		// 하이픈 제거하여 숫자만 사용
+		const phoneNumbersOnly = phone.replace(/\D/g, "");
+		
+		if (!phoneNumbersOnly || phoneNumbersOnly.length < 7) {
 			return NextResponse.json({ message: "Invalid phone" }, { status: 400 });
 		}
-		const ip = getClientIp(req.headers);
-		const r = rateLimit(`booking:list:${ip}`, 10, 60_000);
-		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
-		const where: any = { customerPhone: phone };
+		
+		// 관리자 세션 확인 (관리자는 rate limit 완화)
+		const adminCookie = req.cookies.get("admin_session");
+		const isAdmin = adminCookie?.value === "ok";
+		
+		console.log("[GET /api/bookings] Admin check:", {
+			hasCookie: !!adminCookie,
+			cookieValue: adminCookie?.value,
+			isAdmin,
+			allCookies: Object.fromEntries(req.cookies.getAll().map(c => [c.name, c.value]))
+		});
+		
+		if (!isAdmin) {
+			const ip = getClientIp(req.headers);
+			const r = rateLimit(`booking:list:${ip}`, 10, 60_000);
+			if (!r.ok) {
+				console.log("[GET /api/bookings] Rate limit exceeded for IP:", ip);
+				return NextResponse.json({ message: "Too many requests" }, { status: 429 });
+			}
+		} else {
+			console.log("[GET /api/bookings] Admin request - rate limit bypassed");
+		}
+		const where: any = { customerPhone: phoneNumbersOnly };
 		if (designerIdFilter) where.designerId = designerIdFilter;
 		const list = await prisma.booking.findMany({ where, orderBy: { startISO: "asc" } });
 		const data: Booking[] = list.map((b: any) => ({
@@ -203,7 +234,11 @@ export async function PUT(req: NextRequest) {
 		const r = rateLimit(`booking:lookup:${ip}`, 10, 60_000);
 		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
 		const where: any = { id: bookingId };
-		if (customerPhone) where.customerPhone = customerPhone;
+		if (customerPhone) {
+			// 하이픈 제거하여 숫자만 사용 (DB에 저장된 형식과 일치)
+			const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
+			where.customerPhone = phoneNumbersOnly;
+		}
 		const b = await prisma.booking.findFirst({ where });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		const data: Booking = {
@@ -234,11 +269,13 @@ export async function DELETE(req: NextRequest) {
 		const ip = getClientIp(req.headers);
 		const r = rateLimit(`booking:cancel:${ip}`, 5, 60_000);
 		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
-		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone } });
+		// 하이픈 제거하여 숫자만 사용 (DB에 저장된 형식과 일치)
+		const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
+		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone: phoneNumbersOnly } });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		await prisma.booking.delete({ where: { id: b.id } });
 		// 메모리 동기화
-		const idx = existingBookings.findIndex(x => x.id === bookingId && x.customerPhone === customerPhone);
+		const idx = existingBookings.findIndex(x => x.id === bookingId && x.customerPhone === phoneNumbersOnly);
 		if (idx !== -1) existingBookings.splice(idx, 1);
 		return NextResponse.json({ ok: true });
 	} catch {
@@ -256,7 +293,9 @@ export async function PATCH(req: NextRequest) {
 		const ip = getClientIp(req.headers);
 		const r = rateLimit(`booking:reschedule:${ip}`, 5, 60_000);
 		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
-		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone } });
+		// 하이픈 제거하여 숫자만 사용 (DB에 저장된 형식과 일치)
+		const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
+		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone: phoneNumbersOnly } });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		// 검증
 		const svcIds: string[] = JSON.parse(b.serviceIds);

@@ -2,7 +2,7 @@
 import { designers } from "@/lib/data";
 import { setTime, formatLocalISO } from "@/lib/time";
 import { useEffect, useMemo, useState } from "react";
-import { formatTimeRange } from "@/lib/format";
+import { formatTimeRange, formatPhoneNumber } from "@/lib/format";
 import Calendar from "@/components/Calendar";
 import { Designer, Booking, Block } from "@/lib/types";
 
@@ -721,22 +721,39 @@ export default function AdminPage() {
 					<div className="grid gap-3 sm:grid-cols-[1fr_auto]">
 						<input
 							className="rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all outline-none"
-							placeholder="연락처 입력(예: 01012345678)"
+							placeholder="연락처 입력(예: 010-1234-5678)"
 							value={searchPhone}
-							onChange={e => setSearchPhone(e.target.value)}
+							onChange={e => {
+								// 입력값을 포맷팅하여 표시
+								const formatted = formatPhoneNumber(e.target.value);
+								setSearchPhone(formatted);
+							}}
 						/>
 						<button
 							className="rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all hover:scale-105"
 							onClick={async () => {
 								setAdminMsg("");
-								const query = new URLSearchParams({ phone: searchPhone, designerId: designerId || "" }).toString();
-								const res = await fetch(`/api/bookings?${query}`);
+								// 하이픈 제거하여 숫자만 전송
+								const phoneNumbersOnly = searchPhone.replace(/\D/g, "");
+								if (!phoneNumbersOnly || phoneNumbersOnly.length < 7) {
+									setAdminMsg("올바른 전화번호를 입력해주세요.");
+									return;
+								}
+								const query = new URLSearchParams({ phone: phoneNumbersOnly, designerId: designerId || "" }).toString();
+								const res = await fetch(`/api/bookings?${query}`, {
+									credentials: "include", // 쿠키 포함 (관리자 인증용)
+								});
 								if (res.ok) {
 									const data = await res.json();
 									setBookingList(data);
 									if (data.length === 0) setAdminMsg("검색 결과가 없습니다.");
 								} else {
-									setAdminMsg("조회 중 오류가 발생했습니다.");
+									const errorData = await res.json().catch(() => ({ message: "조회 중 오류가 발생했습니다." }));
+									if (res.status === 429) {
+										setAdminMsg("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+									} else {
+										setAdminMsg(errorData.message || "조회 중 오류가 발생했습니다.");
+									}
 								}
 							}}
 						>
@@ -757,7 +774,9 @@ export default function AdminPage() {
 							<div key={b.id} className="flex items-center justify-between rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 hover:border-pink-300 hover:shadow-md transition-all">
 								<div>
 									<div className="font-semibold text-gray-800">{formatTimeRange(b.startISO, b.endISO)}</div>
-									<div className="text-xs text-gray-500 mt-1">ID: {b.id} · 디자이너: {b.designerId} · {b.customerName}</div>
+									<div className="text-xs text-gray-500 mt-1">
+										ID: {b.id} · 디자이너: {b.designerId} · {b.customerName} · {formatPhoneNumber(b.customerPhone)}
+									</div>
 								</div>
 								<div className="flex gap-2">
 									<a
@@ -770,19 +789,27 @@ export default function AdminPage() {
 									<button
 										className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105"
 										onClick={async () => {
+											if (!confirm(`예약을 삭제하시겠습니까?\n\n고객: ${b.customerName}\n전화번호: ${formatPhoneNumber(b.customerPhone)}\n시간: ${formatTimeRange(b.startISO, b.endISO)}`)) {
+												return;
+											}
 											const res = await fetch("/api/bookings", {
 												method: "DELETE",
 												headers: { "Content-Type": "application/json" },
+												credentials: "include", // 쿠키 포함 (관리자 인증용)
 												body: JSON.stringify({ bookingId: b.id, customerPhone: b.customerPhone }),
 											});
 											if (res.ok) {
 												setBookingList(prev => prev.filter(x => x.id !== b.id));
+												setAdminMsg("예약이 성공적으로 삭제되었습니다.");
+												// 3초 후 메시지 제거
+												setTimeout(() => setAdminMsg(""), 3000);
 											} else {
-												alert("취소 중 오류가 발생했습니다.");
+												const errorData = await res.json().catch(() => ({ message: "알 수 없는 오류" }));
+												alert(`삭제 중 오류가 발생했습니다: ${errorData.message || "알 수 없는 오류"}`);
 											}
 										}}
 									>
-										취소
+										삭제
 									</button>
 								</div>
 							</div>
