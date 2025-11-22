@@ -160,12 +160,24 @@ export default function Calendar({ designerId, dateISO, onChange }: Props) {
 
 								{/* 예약/차단 정보 */}
 								{count && !isPast && (
-									<div className="flex items-center gap-1 mt-0.5">
+									<div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
 										{count.bookings > 0 && (
-											<div className="h-1.5 w-1.5 rounded-full bg-green-500" title={`예약 ${count.bookings}개`} />
+											<div 
+												className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-green-100 border border-green-300"
+												title={`예약 ${count.bookings}개`}
+											>
+												<div className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
+												<span className="text-[10px] font-semibold text-green-700 leading-none">{count.bookings}</span>
+											</div>
 										)}
 										{count.blocks > 0 && (
-											<div className="h-1.5 w-1.5 rounded-full bg-orange-400" title={`차단 ${count.blocks}개`} />
+											<div 
+												className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-100 border border-orange-300"
+												title={`차단 ${count.blocks}개`}
+											>
+												<div className="h-1.5 w-1.5 rounded-full bg-orange-500 flex-shrink-0" />
+												<span className="text-[10px] font-semibold text-orange-700 leading-none">{count.blocks}</span>
+											</div>
 										)}
 									</div>
 								)}
