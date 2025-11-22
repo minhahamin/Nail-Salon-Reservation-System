@@ -297,6 +297,9 @@ export async function PATCH(req: NextRequest) {
 		const r = rateLimit(`booking:reschedule:${ip}`, 5, 60_000);
 		if (!r.ok) return NextResponse.json({ message: "Too many requests" }, { status: 429 });
 		// 하이픈 제거하여 숫자만 사용 (DB에 저장된 형식과 일치)
+		if (!customerPhone) {
+			return NextResponse.json({ message: "customerPhone is required" }, { status: 400 });
+		}
 		const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
 		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone: phoneNumbersOnly } });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
