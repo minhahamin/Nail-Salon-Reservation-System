@@ -41,7 +41,7 @@ export default function AdminPage() {
 	} | null>(null);
 
 	const date = new Date(dateISO);
-	const [list, setList] = useState<{ kind: "booking" | "block"; id?: string; startISO: string; endISO: string; label: string }[]>([]);
+	const [list, setList] = useState<{ kind: "booking" | "block" | "break"; id?: string; startISO: string; endISO: string; label: string; breakType?: "break" | "recurringBreak" }[]>([]);
 
 	const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -61,6 +61,7 @@ export default function AdminPage() {
 				const data = await res.json() as { 
 					bookings: Array<Pick<Booking, 'id' | 'startISO' | 'endISO'>>; 
 					blocks: Array<Pick<Block, 'id' | 'startISO' | 'endISO' | 'reason'>>;
+					breaks?: Array<{ startISO: string; endISO: string; label: string }>;
 				};
 				const items = [
 					...data.bookings.map((b) => ({
@@ -76,6 +77,14 @@ export default function AdminPage() {
 						startISO: b.startISO,
 						endISO: b.endISO,
 						label: `차단 ${new Date(b.startISO).toLocaleDateString()} ${formatTimeRange(b.startISO, b.endISO)}${b.reason ? " · " + b.reason : ""}`,
+					})),
+					...(data.breaks || []).map((br) => ({
+						kind: "break" as const,
+						id: undefined,
+						startISO: br.startISO,
+						endISO: br.endISO,
+						label: br.label,
+						breakType: br.type,
 					})),
 				].sort((a, b) => a.startISO.localeCompare(b.startISO));
 				setList(items);
@@ -299,10 +308,26 @@ export default function AdminPage() {
 									className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 ${
 										item.kind === "booking" 
 											? "border-green-300 bg-gradient-to-r from-green-50 to-emerald-50" 
+											: item.kind === "break"
+											? "border-pink-300 bg-gradient-to-r from-pink-50 to-rose-50"
 											: "border-gray-300 bg-gradient-to-r from-gray-50 to-slate-50"
 									} hover:shadow-md transition-all`}
 								>
-									<span className="font-medium text-gray-800">{item.label}</span>
+									<div className="flex items-center gap-2">
+										{item.kind === "break" && (
+											<div className={`h-2 w-2 rounded-full flex-shrink-0 ${
+												item.breakType === "recurringBreak" 
+													? "bg-purple-500" 
+													: "bg-pink-500"
+											}`} />
+										)}
+										<span className="font-medium text-gray-800">{item.label}</span>
+										{item.kind === "break" && item.breakType === "recurringBreak" && (
+											<span className="px-2 py-0.5 rounded bg-purple-100 text-purple-700 text-xs font-medium">
+												반복
+											</span>
+										)}
+									</div>
 									{item.kind === "block" && item.id && (
 										<button
 											className="ml-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-md transition-all hover:scale-105"

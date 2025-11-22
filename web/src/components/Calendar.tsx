@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatLocalISO, setTime } from "@/lib/time";
 
-type MonthData = Record<number, { bookings: number; blocks: number }>;
+type MonthData = Record<number, { bookings: number; blocks: number; breaks: number }>;
 
 type Props = {
 	designerId?: string;
@@ -158,7 +158,7 @@ export default function Calendar({ designerId, dateISO, onChange }: Props) {
 									<div className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
 								)}
 
-								{/* 예약/차단 정보 */}
+								{/* 예약/차단/브레이크 정보 */}
 								{count && !isPast && (
 									<div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
 										{count.bookings > 0 && (
@@ -177,6 +177,15 @@ export default function Calendar({ designerId, dateISO, onChange }: Props) {
 											>
 												<div className="h-1.5 w-1.5 rounded-full bg-orange-500 flex-shrink-0" />
 												<span className="text-[10px] font-semibold text-orange-700 leading-none">{count.blocks}</span>
+											</div>
+										)}
+										{count.breaks > 0 && (
+											<div 
+												className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-pink-100 border border-pink-300"
+												title={`브레이크타임 ${count.breaks}개`}
+											>
+												<div className="h-1.5 w-1.5 rounded-full bg-pink-500 flex-shrink-0" />
+												<span className="text-[10px] font-semibold text-pink-700 leading-none">{count.breaks}</span>
 											</div>
 										)}
 									</div>
@@ -200,14 +209,18 @@ export default function Calendar({ designerId, dateISO, onChange }: Props) {
 
 			{/* 범례 */}
 			{(Object.keys(days).length > 0 || true) && (
-				<div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-center gap-4 text-xs text-gray-600">
+				<div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-center gap-3 text-xs text-gray-600 flex-wrap">
 					<div className="flex items-center gap-1.5">
 						<div className="h-2 w-2 rounded-full bg-green-500" />
-						<span>예약 있음</span>
+						<span>예약</span>
 					</div>
 					<div className="flex items-center gap-1.5">
 						<div className="h-2 w-2 rounded-full bg-orange-400" />
-						<span>차단 있음</span>
+						<span>차단</span>
+					</div>
+					<div className="flex items-center gap-1.5">
+						<div className="h-2 w-2 rounded-full bg-pink-500" />
+						<span>브레이크</span>
 					</div>
 					<div className="flex items-center gap-1.5">
 						<div className="h-2 w-2 rounded-full bg-blue-500" />
