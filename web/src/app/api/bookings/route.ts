@@ -273,7 +273,7 @@ export async function DELETE(req: NextRequest) {
 		if (!customerPhone) {
 			return NextResponse.json({ message: "customerPhone is required" }, { status: 400 });
 		}
-		const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
+		const phoneNumbersOnly = (customerPhone ?? "").replace(/\D/g, "");
 		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone: phoneNumbersOnly } });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		await prisma.booking.delete({ where: { id: b.id } });
@@ -300,7 +300,7 @@ export async function PATCH(req: NextRequest) {
 		if (!customerPhone) {
 			return NextResponse.json({ message: "customerPhone is required" }, { status: 400 });
 		}
-		const phoneNumbersOnly = customerPhone.replace(/\D/g, "");
+		const phoneNumbersOnly = (customerPhone ?? "").replace(/\D/g, "");
 		const b = await prisma.booking.findFirst({ where: { id: bookingId, customerPhone: phoneNumbersOnly } });
 		if (!b) return NextResponse.json({ message: "Not found" }, { status: 404 });
 		// 검증
